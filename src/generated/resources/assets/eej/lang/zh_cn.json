@@ -1,4 +1,13 @@
 {
+  "altar.eej.filter_cleared": "已清除该祭台的过滤器",
+  "altar.eej.filter_rejected": "该物品不被祭台过滤器接受（%s）",
+  "altar.eej.no_material": "祭台上没有可用的材料",
+  "altar.eej.no_recipe": "没有匹配的祭坛配方",
+  "altar.eej.not_main_pedestal": "请对主祭台操作（%s %s %s）",
+  "altar.eej.not_main_pedestal_unknown": "这不是主祭台",
+  "altar.eej.points_insufficient": "祭坛点数不足（需要 %s，当前 %s）",
+  "altar.eej.structure_invalid": "祭坛结构无效",
+  "altar.eej.structure_invalid_reason": "祭坛结构无效：%s",
   "block.eej.packed_mud_altar_stone": "泥坯祭坛石",
   "block.eej.packed_mud_pedestal": "泥坯祭台",
   "category.eej.altar_crafting": "祭坛合成",
@@ -24,5 +33,6 @@
   "item.small_item_frame.count": "已存 %d/%d",
   "item.small_item_frame.max_reached": "无法添加（已达上限或已存在）",
   "item.small_item_frame.no_offhand": "副手无物品",
-  "itemGroup.eej.main_tab": "终末-元素奇旅"
+  "itemGroup.eej.main_tab": "终末-元素奇旅",
+  "jei.eej.altar_crafting.hint": "把材料放在任意祭台上，顺序无关"
 }

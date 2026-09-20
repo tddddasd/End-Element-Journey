@@ -1,41 +1,60 @@
 package org.tdddd.eej.impl.datagen.gen;
 
+import net.minecraft.client.data.models.BlockModelGenerators;
+import net.minecraft.client.data.models.ItemModelGenerators;
+import net.minecraft.client.data.models.ModelProvider;
+import net.minecraft.client.data.models.model.ModelTemplates;
+import net.minecraft.client.data.models.model.TexturedModel;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.PackOutput;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.client.model.generators.BlockStateProvider;
-import net.minecraftforge.common.data.ExistingFileHelper;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.tdddd.eej.impl.eej;
+import org.tdddd.eej.impl.registry.EejBlocks;
+import org.tdddd.eej.impl.registry.EejItems;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.stream.Stream;
 
 
-public class EejBlockStateData extends BlockStateProvider {
+public class EejBlockStateData extends ModelProvider {
+
+    public EejBlockStateData(PackOutput output) {
+        super(output, eej.MODID);
+    }
 
     
-    private static final Set<String> MANUAL_BLOCKS = Set.of(
-            "packed_mud_pedestal"
-    );
+    private static final java.util.Set<String> MANUAL_BLOCKS = java.util.Set.of("packed_mud_pedestal");
 
-    public EejBlockStateData(PackOutput output, ExistingFileHelper exFileHelper) {
-        super(output, eej.MODID, exFileHelper);
+    @Override
+    protected Stream<? extends Holder<Block>> getKnownBlocks() {
+        return Stream.of(
+                BuiltInRegistries.BLOCK.wrapAsHolder(EejBlocks.PACKED_MUD_ALTAR_STONE.get())
+        );
     }
 
     @Override
-    protected void registerStatesAndModels() {
-        ForgeRegistries.BLOCKS.getEntries().stream()
-                .filter(e -> e.getKey().location().getNamespace().equals(eej.MODID))
-                .filter(e -> !MANUAL_BLOCKS.contains(e.getKey().location().getPath()))
-                .map(Map.Entry::getValue)
-                .forEach(this::generateSimpleBlock);
+    protected Stream<? extends Holder<Item>> getKnownItems() {
+        return Stream.of(
+                BuiltInRegistries.ITEM.wrapAsHolder(EejItems.PACKED_MUD_ALTAR_STONE.get()),
+                BuiltInRegistries.ITEM.wrapAsHolder(EejItems.SMALL_ITEM_FRAME.get())
+        );
     }
 
-    private void generateSimpleBlock(Block block) {
-        ResourceLocation key = ForgeRegistries.BLOCKS.getKey(block);
-        if (key == null) return;
-        String name = key.getPath();
-        simpleBlockWithItem(block, models().cubeAll(name, modLoc("block/" + name)));
+    @Override
+    protected void registerModels(BlockModelGenerators blockModels, ItemModelGenerators itemModels) {
+        
+        Block altarStone = EejBlocks.PACKED_MUD_ALTAR_STONE.get();
+        blockModels.createTrivialBlock(altarStone, TexturedModel.CUBE);
+        
+        blockModels.registerSimpleItemModel(altarStone, net.minecraft.client.data.models.model.ModelLocationUtils.getModelLocation(altarStone));
+
+        
+        itemModels.generateFlatItem(EejItems.SMALL_ITEM_FRAME.get(), ModelTemplates.FLAT_ITEM);
+    }
+
+    @Override
+    public String getName() {
+        return "eej Block States and Models";
     }
 }

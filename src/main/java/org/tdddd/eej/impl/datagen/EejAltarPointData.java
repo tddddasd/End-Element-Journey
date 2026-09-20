@@ -1,12 +1,12 @@
 package org.tdddd.eej.impl.datagen;
 
 import com.google.gson.JsonObject;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.tdddd.eej.impl.altar.AbstractAltarBlock;
 import org.tdddd.eej.impl.eej;
 import org.tdddd.eej.impl.registry.EejBlocks;
@@ -34,7 +34,7 @@ public class EejAltarPointData implements DataProvider {
     }
 
     private static void add(JsonObject root, Block block) {
-        ResourceLocation key = ForgeRegistries.BLOCKS.getKey(block);
+        Identifier key = BuiltInRegistries.BLOCK.getKey(block);
         if (key == null || !(block instanceof AbstractAltarBlock altarBlock)) return;
         JsonObject entry = new JsonObject();
         entry.addProperty("points", altarBlock.getAltarPoints());

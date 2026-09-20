@@ -5,10 +5,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.level.ChunkEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.level.ChunkEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.tdddd.eej.impl.eej;
 
 import java.util.HashMap;
@@ -25,18 +24,11 @@ public class IslandEvents {
         if (!(event.getLevel() instanceof ServerLevel level)) {
             return; 
         }
-        
-        if (event.getChunk() instanceof LevelChunk chunk) {
-            IslandChunkManager.classify(level, chunk);
-        }
+        IslandChunkManager.classify(level, event.getChunk());
     }
 
     @SubscribeEvent
-    public void onServerTick(TickEvent.ServerTickEvent event) {
-        
-        if (event.phase != TickEvent.Phase.END) {
-            return;
-        }
+    public void onServerTick(ServerTickEvent.Post event) {
         if (++this.tickCounter < IslandChunkManager.DAMAGE_INTERVAL_TICKS) {
             return;
         }
@@ -62,7 +54,7 @@ public class IslandEvents {
                     eej.LOGGER.info("[eej-island] {} 位于虚空区块 {}，虚空伤害 {} 点",
                             player.getName().getString(), chunk, damage);
                 }
-                living.hurt(living.damageSources().fellOutOfWorld(), damage);
+                living.hurtServer(level, living.damageSources().fellOutOfWorld(), damage);
             }
         }
     }

@@ -1,10 +1,13 @@
 package org.tdddd.eej.impl.compat.jei;
 
+import net.minecraft.core.Holder;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.ArrayList;
 import java.util.List;
+
 
 public class AltarCraftingRecipe {
     private final List<IngredientEntry> inputs;
@@ -25,8 +28,8 @@ public class AltarCraftingRecipe {
         public IngredientEntry(Ingredient ingredient, int count) {
             this.count = count;
             this.displayStacks = new ArrayList<>();
-            for (ItemStack stack : ingredient.getItems()) {
-                ItemStack copy = stack.copy();
+            for (Holder<Item> holder : ingredient.items().toList()) {
+                ItemStack copy = new ItemStack(holder);
                 copy.setCount(count);
                 displayStacks.add(copy);
             }

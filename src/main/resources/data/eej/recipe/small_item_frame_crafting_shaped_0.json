@@ -1,13 +1,9 @@
-{
+﻿{
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "key": {
-    "C": {
-      "item": "minecraft:leather"
-    },
-    "I": {
-      "item": "minecraft:stick"
-    }
+    "C": "minecraft:leather",
+    "I": "minecraft:stick"
   },
   "pattern": [
     " I ",
@@ -16,7 +12,7 @@
   ],
   "result": {
     "count": 4,
-    "item": "eej:small_item_frame"
+    "id": "eej:small_item_frame"
   },
   "show_notification": true
 }

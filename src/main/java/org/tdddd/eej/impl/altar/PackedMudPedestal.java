@@ -18,7 +18,7 @@ public class PackedMudPedestal extends AbstractAltarBlock {
     public static final int MAX_COUNT_IN_STRUCTURE = 21;
 
     public PackedMudPedestal() {
-        super(ALTAR_POINTS, MAX_COUNT_IN_STRUCTURE, Properties.of()
+        this(Properties.of()
                 .noOcclusion()
                 .strength(1.0f, 3.0f)
                 .sound(SoundType.PACKED_MUD)
@@ -26,9 +26,12 @@ public class PackedMudPedestal extends AbstractAltarBlock {
                 .isSuffocating((state, world, pos) -> false)
                 .pushReaction(PushReaction.DESTROY)
                 .requiresCorrectToolForDrops()
-                .mapColor(DyeColor.ORANGE)
-                .randomTicks()
-        );
+                .mapColor(DyeColor.ORANGE));
+    }
+
+    
+    public PackedMudPedestal(Properties properties) {
+        super(ALTAR_POINTS, MAX_COUNT_IN_STRUCTURE, properties);
     }
 
     @Override
@@ -40,5 +43,13 @@ public class PackedMudPedestal extends AbstractAltarBlock {
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new PackedMudPedestalBlockEntity(pos, state);
+    }
+
+    public static final com.mojang.serialization.MapCodec<PackedMudPedestal> CODEC =
+            simpleCodec(PackedMudPedestal::new);
+
+    @Override
+    protected com.mojang.serialization.MapCodec<? extends net.minecraft.world.level.block.BaseEntityBlock> codec() {
+        return CODEC;
     }
 }

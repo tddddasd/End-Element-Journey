@@ -1,25 +1,26 @@
 package org.tdddd.eej.api.mob;
 
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.Holder;
 import net.minecraft.world.item.enchantment.Enchantment;
+import net.neoforged.neoforge.common.util.ValueIOSerializable;
 
 import java.util.List;
 
 
-public interface IMobEnchantments {
+public interface IMobEnchantments extends ValueIOSerializable {
 
     
     List<MobEnchantment> getAll();
 
     
-    int getLevel(Enchantment enchantment);
+    int getLevel(Holder<Enchantment> enchantment);
 
     boolean hasAny();
 
     
-    boolean apply(Enchantment enchantment, int level, int durationTicks);
+    boolean apply(Holder<Enchantment> enchantment, int level, int durationTicks);
 
-    boolean remove(Enchantment enchantment);
+    boolean remove(Holder<Enchantment> enchantment);
 
     boolean clear();
 
@@ -31,7 +32,7 @@ public interface IMobEnchantments {
 
     void copyFrom(IMobEnchantments other);
 
-    CompoundTag save();
+    net.minecraft.nbt.CompoundTag save();
 
-    void load(CompoundTag tag);
+    void load(net.minecraft.nbt.CompoundTag tag);
 }

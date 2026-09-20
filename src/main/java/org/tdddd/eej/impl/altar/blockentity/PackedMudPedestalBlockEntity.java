@@ -2,10 +2,8 @@ package org.tdddd.eej.impl.altar.blockentity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.StringTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -15,45 +13,46 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemStackHandler;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import org.jetbrains.annotations.Nullable;
 import org.tdddd.eej.api.AltarItemContainer;
 import org.tdddd.eej.impl.altar.AbstractAltarBlock;
-import org.tdddd.eej.impl.network.EejNetwork;
 import org.tdddd.eej.impl.network.PedestalItemSyncPacket;
 import org.tdddd.eej.impl.registry.EejBlockEntities;
 
-import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
+
 public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarItemContainer {
     private final ItemStackHandler itemHandler = createHandler();
-    private final Map<Direction, LazyOptional<IItemHandler>> sideHandlers = new EnumMap<>(Direction.class);
+    private final Map<Direction, IItemHandler> sideHandlers = new EnumMap<>(Direction.class);
 
     private List<String> filterData = Collections.emptyList();
     private boolean isMainPedestal = false;
-    private int clientRenderTick = 0;
 
     public PackedMudPedestalBlockEntity(BlockPos pos, BlockState state) {
         super(EejBlockEntities.PACKED_MUD_PEDESTAL.get(), pos, state);
         for (Direction dir : Direction.values()) {
-            sideHandlers.put(dir, LazyOptional.of(() -> new SideFilteredItemHandler(dir)));
+            sideHandlers.put(dir, new SideFilteredItemHandler(dir));
         }
     }
 
     private ItemStackHandler createHandler() {
         return new ItemStackHandler(1) {
+            @Override
             protected void onContentsChanged(int slot) {
                 setChanged();
                 if (level != null) {
@@ -63,7 +62,7 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
             }
 
             @Override
-            public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
+            public boolean isItemValid(int slot, ItemStack stack) {
                 return true;
             }
 
@@ -110,7 +109,7 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
     public void setFilterData(List<String> data) {
         this.filterData = data == null ? Collections.emptyList() : new ArrayList<>(data);
         setChanged();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }
@@ -120,92 +119,147 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
         return isMainPedestal;
     }
 
+    
     @Override
     public void setMainPedestal(boolean isMain) {
+        if (this.isMainPedestal == isMain) {
+            return;
+        }
         this.isMainPedestal = isMain;
+        setChanged();
     }
 
+    
+
+    
     @Override
-    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
-        handleUpdateTag(pkt.getTag());
-        if (level != null && level.isClientSide) {
+    public void onDataPacket(Connection net, ValueInput valueInput) {
+        handleUpdateTag(valueInput);
+        if (level != null && level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
             requestModelDataUpdate();
         }
     }
 
-    @Nonnull
     @Override
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
-        if (cap == ForgeCapabilities.ITEM_HANDLER && side != null) {
-            LazyOptional<IItemHandler> handler = sideHandlers.get(side);
-            if (handler != null) {
-                return handler.cast();
-            }
-        }
-        return super.getCapability(cap, side);
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        input.child("inventory").ifPresent(itemHandler::deserialize);
+        List<String> filters = new ArrayList<>();
+        input.listOrEmpty("filterData", com.mojang.serialization.Codec.STRING).forEach(filters::add);
+        filterData = filters.isEmpty() ? Collections.emptyList() : filters;
+        
+        isMainPedestal = input.getBooleanOr("mainPedestal", false);
     }
 
     @Override
-    public void invalidateCaps() {
-        super.invalidateCaps();
-        for (LazyOptional<IItemHandler> handler : sideHandlers.values()) {
-            handler.invalidate();
-        }
-        sideHandlers.clear();
-    }
-
-    @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
-        if (tag.contains("inventory")) {
-            itemHandler.deserializeNBT(tag.getCompound("inventory"));
-        }
-        if (tag.contains("filterData")) {
-            ListTag list = tag.getList("filterData", Tag.TAG_STRING);
-            filterData = new ArrayList<>();
-            for (Tag t : list) {
-                filterData.add(t.getAsString());
-            }
-        } else {
-            filterData = Collections.emptyList();
-        }
-    }
-
-    @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-        tag.put("inventory", itemHandler.serializeNBT());
-        ListTag list = new ListTag();
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        ValueOutput inventory = output.child("inventory");
+        itemHandler.serialize(inventory);
+        ValueOutput.TypedOutputList<String> list = output.list("filterData", com.mojang.serialization.Codec.STRING);
         for (String s : filterData) {
-            list.add(StringTag.valueOf(s));
+            list.add(s);
         }
-        tag.put("filterData", list);
+        output.putBoolean("mainPedestal", isMainPedestal);
     }
 
+    
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        return saveCustomOnly(registries);
+    }
+
+    
+    @Override
+    public void handleUpdateTag(ValueInput input) {
+        loadWithComponents(input);
+        if (level != null && level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            requestModelDataUpdate();
+        }
+    }
+
+    @Nullable
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    
+    
+    
+    
+
+    public void syncItem(ItemStack stack) {
+        if (stack.isEmpty()) {
+            itemHandler.setStackInSlot(0, ItemStack.EMPTY);
+        } else {
+            itemHandler.setStackInSlot(0, stack.copy());
+        }
+        requestModelDataUpdate();
+        if (level != null && level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    private void syncToClient() {
+        if (level == null || level.isClientSide()) return;
+        if (!(level instanceof ServerLevel serverLevel)) return;
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(
+                serverLevel,
+                new net.minecraft.world.level.ChunkPos(worldPosition.getX() >> 4, worldPosition.getZ() >> 4),
+                new PedestalItemSyncPacket(worldPosition, getItem()));
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level instanceof ServerLevel) {
+            syncToClient();
+        }
+    }
+
+    
+
+    
+    public static void registerCapabilities(RegisterCapabilitiesEvent event) {
+        
+        
+        
+        event.registerBlockEntity(Capabilities.Item.BLOCK, EejBlockEntities.PACKED_MUD_PEDESTAL.get(),
+                (be, side) -> side == null ? null : new SideFilteredResourceHandler(be, side));
+    }
+
+    private boolean isLocked() {
+        if (level == null) return true;
+        BlockState state = level.getBlockState(worldPosition);
+        if (state.getBlock() instanceof AbstractAltarBlock altarBlock) {
+            return altarBlock.isLocked(level, worldPosition);
+        }
+        return true;
+    }
+
+    private void notifyChange() {
+        setChanged();
+        if (level != null && !level.isClientSide()) {
+            requestModelDataUpdate();
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            syncToClient();
+        }
+    }
+
+    
+    public IItemHandler getSideHandler(@Nullable Direction side) {
+        return side == null ? null : sideHandlers.get(side);
+    }
+
+    
     private class SideFilteredItemHandler implements IItemHandler {
         private final Direction side;
 
         SideFilteredItemHandler(Direction side) {
             this.side = side;
-        }
-
-        private boolean isLocked() {
-            if (level == null) return true;
-            BlockState state = level.getBlockState(worldPosition);
-            if (state.getBlock() instanceof AbstractAltarBlock altarBlock) {
-                return altarBlock.isLocked(level, worldPosition);
-            }
-            return true;
-        }
-
-        private void notifyChange() {
-            setChanged();
-            if (level != null && !level.isClientSide) {
-                requestModelDataUpdate();
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-                syncToClient();
-            }
         }
 
         @Override
@@ -224,13 +278,10 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
             if (side == Direction.UP || side == Direction.DOWN) return stack;
             if (!itemHandler.getStackInSlot(slot).isEmpty()) return stack;
 
-            if (!PackedMudPedestalBlockEntity.this.isMainPedestal()) {
-                if (!PackedMudPedestalBlockEntity.this.filterData.isEmpty()) {
-                    if (!AltarItemContainer.matchesFilter(stack,
-                            PackedMudPedestalBlockEntity.this.filterData)) {
-                        return stack;
-                    }
-                }
+            
+            
+            if (!PackedMudPedestalBlockEntity.this.acceptsInsertion(stack)) {
+                return stack;
             }
 
             ItemStack remaining = itemHandler.insertItem(slot, stack, simulate);
@@ -265,73 +316,68 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
         }
     }
 
-    public static void tick(Level level, BlockPos pos, BlockState state, PackedMudPedestalBlockEntity be) {
-        if (level.isClientSide) {
-            be.clientRenderTick++;
-            if (be.clientRenderTick >= 10) {
-                be.clientRenderTick = 0;
-                be.requestModelDataUpdate();
-                if (be.level != null) {
-                    be.level.sendBlockUpdated(pos, state, state, 3);
-                }
+    
+    private static class SideFilteredResourceHandler implements ResourceHandler<ItemResource> {
+        private final PackedMudPedestalBlockEntity be;
+        private final Direction side;
+
+        SideFilteredResourceHandler(PackedMudPedestalBlockEntity be, Direction side) {
+            this.be = be;
+            this.side = side;
+        }
+
+        @Override
+        public int size() {
+            return 1;
+        }
+
+        @Override
+        public ItemResource getResource(int index) {
+            return ItemResource.of(be.itemHandler.getStackInSlot(0));
+        }
+
+        @Override
+        public long getAmountAsLong(int index) {
+            return be.itemHandler.getStackInSlot(0).getCount();
+        }
+
+        @Override
+        public long getCapacityAsLong(int index, ItemResource resource) {
+            return be.itemHandler.getSlotLimit(0);
+        }
+
+        @Override
+        public boolean isValid(int index, ItemResource resource) {
+            if (be.isLocked()) return false;
+            if (side == Direction.UP || side == Direction.DOWN) return false;
+            if (!be.itemHandler.getStackInSlot(0).isEmpty()) return false;
+            
+            return be.acceptsInsertion(resource.toStack());
+        }
+
+        @Override
+        public int insert(int index, ItemResource resource, int amount, TransactionContext transaction) {
+            if (!isValid(index, resource)) return 0;
+            ItemStack stack = resource.toStack(amount);
+            ItemStack remaining = be.itemHandler.insertItem(0, stack, false);
+            int inserted = amount - remaining.getCount();
+            if (inserted > 0) {
+                be.notifyChange();
             }
+            return inserted;
         }
-    }
 
-    @OnlyIn(Dist.CLIENT)
-    public void syncItem(ItemStack stack) {
-        if (stack.isEmpty()) {
-            clearItem();
-        } else {
-            itemHandler.setStackInSlot(0, stack.copy());
+        @Override
+        public int extract(int index, ItemResource resource, int amount, TransactionContext transaction) {
+            if (be.isLocked()) return 0;
+            if (side != Direction.DOWN) return 0;
+            ItemStack current = be.itemHandler.getStackInSlot(0);
+            if (current.isEmpty() || !resource.matches(current)) return 0;
+            ItemStack extracted = be.itemHandler.extractItem(0, amount, false);
+            if (!extracted.isEmpty()) {
+                be.notifyChange();
+            }
+            return extracted.getCount();
         }
-        requestModelDataUpdate();
-        if (level != null && level.isClientSide) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-        }
-    }
-
-    private void syncToClient() {
-        if (level == null || level.isClientSide) return;
-        ItemStack stack = getItem();
-        Packet<?> packet = EejNetwork.INSTANCE.toVanillaPacket(
-                new PedestalItemSyncPacket(worldPosition, stack),
-                net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT
-        );
-        ServerLevel serverLevel = (ServerLevel) level;
-        LevelChunk chunk = serverLevel.getChunkAt(worldPosition);
-        serverLevel.getChunkSource().chunkMap.getPlayers(chunk.getPos(), false).forEach(player -> {
-            player.connection.send(packet);
-        });
-    }
-
-    @Override
-    public void onLoad() {
-        super.onLoad();
-        if (level instanceof ServerLevel) {
-            syncToClient();
-        }
-    }
-
-    @Override
-    public CompoundTag getUpdateTag() {
-        CompoundTag tag = super.getUpdateTag();
-        saveAdditional(tag);
-        return tag;
-    }
-
-    @Override
-    public void handleUpdateTag(CompoundTag tag) {
-        load(tag);
-        if (level != null && level.isClientSide) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-            requestModelDataUpdate();
-        }
-    }
-
-    @Nullable
-    @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
     }
 }

@@ -29,7 +29,8 @@ public final class EejIslandCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("eej_island")
                 
-                .requires(source -> source.hasPermission(2))
+                .requires(Commands.hasPermission(new net.minecraft.server.permissions.PermissionCheck.Require(
+                        net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER)))
                 .then(Commands.literal("query")
                         .executes(context -> query(context, false))
                         .then(Commands.argument("pos", BlockPosArgument.blockPos())
@@ -50,9 +51,9 @@ public final class EejIslandCommand {
         ServerLevel level = source.getLevel();
         ChunkPos chunk = toChunk(resolve(context, hasPos));
 
-        IslandChunkData.ChunkRecord record = IslandChunkData.get(level).get(chunk.x, chunk.z);
+        IslandChunkData.ChunkRecord record = IslandChunkData.get(level).get(chunk.x(), chunk.z());
         Integer group = IslandChunkManager.voidGroupBedrock(level, chunk);
-        LevelChunk self = level.getChunkSource().getChunkNow(chunk.x, chunk.z);
+        LevelChunk self = level.getChunkSource().getChunkNow(chunk.x(), chunk.z());
         boolean vacuum = record != null && record.vacuum();
         boolean isVoid = IslandChunkManager.isVoidChunk(level, chunk);
 
@@ -67,10 +68,10 @@ public final class EejIslandCommand {
                 : (isVoid ? "commands.eej.island.status.void" : "commands.eej.island.status.nonvacuum"));
 
         source.sendSuccess(() -> Component.translatable("commands.eej.island.info",
-                chunk.x, chunk.z, bottomText, groupText, status), false);
+                chunk.x(), chunk.z(), bottomText, groupText, status), false);
         
         eej.LOGGER.info("[eej-island] query chunk [{}, {}] bottom={} group={} vacuum={} void={}",
-                chunk.x, chunk.z,
+                chunk.x(), chunk.z(),
                 self == null ? "?" : IslandChunkManager.countBottomLayer(level, self),
                 group == null ? "?" : group,
                 vacuum, isVoid);
@@ -85,13 +86,13 @@ public final class EejIslandCommand {
         IslandChunkManager.setVacuum(level, chunk, vacuum);
         source.sendSuccess(() -> Component.translatable(
                 vacuum ? "commands.eej.island.set.vacuum" : "commands.eej.island.set.nonvacuum",
-                chunk.x, chunk.z), true);
+                chunk.x(), chunk.z()), true);
         return 1;
     }
 
     
     private static ChunkPos toChunk(BlockPos pos) {
-        return new ChunkPos(pos);
+        return new ChunkPos(pos.getX() >> 4, pos.getZ() >> 4);
     }
 
     

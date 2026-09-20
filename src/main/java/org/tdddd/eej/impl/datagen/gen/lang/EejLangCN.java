@@ -1,10 +1,11 @@
 package org.tdddd.eej.impl.datagen.gen.lang;
 
 import net.minecraft.data.PackOutput;
-import net.minecraftforge.common.data.LanguageProvider;
+import net.neoforged.neoforge.common.data.LanguageProvider;
 import org.tdddd.eej.impl.eej;
 import org.tdddd.eej.impl.registry.EejBlocks;
 import org.tdddd.eej.impl.registry.EejItems;
+
 
 public class EejLangCN extends LanguageProvider {
     public EejLangCN(PackOutput output, String locale) {
@@ -42,6 +43,21 @@ public class EejLangCN extends LanguageProvider {
         add("commands.eej.enchantment.seconds", "%s 秒");
 
         
+        
+        add("altar.eej.no_material", "祭台上没有可用的材料");
+        add("altar.eej.no_recipe", "没有匹配的祭坛配方");
+        add("altar.eej.points_insufficient", "祭坛点数不足（需要 %s，当前 %s）");
+        add("altar.eej.not_main_pedestal", "请对主祭台操作（%s %s %s）");
+        add("altar.eej.not_main_pedestal_unknown", "这不是主祭台");
+        add("altar.eej.structure_invalid", "祭坛结构无效");
+        add("altar.eej.structure_invalid_reason", "祭坛结构无效：%s");
+        add("altar.eej.filter_rejected", "该物品不被祭台过滤器接受（%s）");
+        add("altar.eej.filter_cleared", "已清除该祭台的过滤器");
+
+        
+        add("jei.eej.altar_crafting.hint", "把材料放在任意祭台上，顺序无关");
+
+        
         add("commands.eej.island.info", "区块 %s,%s：底层基岩 %s，3×3 非真空岛底层合计 %s，%s");
         add("commands.eej.island.set.vacuum", "已将区块 %s,%s 设为真空岛区块");
         add("commands.eej.island.set.nonvacuum", "已将区块 %s,%s 设为非真空岛区块");
@@ -49,6 +65,5 @@ public class EejLangCN extends LanguageProvider {
         add("commands.eej.island.status.void", "虚空区块");
         add("commands.eej.island.status.nonvacuum", "非真空岛区块");
         add("commands.eej.island.unknown", "未判定");
-        add("commands.eej.island.needs_pos", "控制台执行时必须指定坐标");
-    }
+        add("commands.eej.island.needs_pos", "控制台执行时必须指定坐标");    }
 }
