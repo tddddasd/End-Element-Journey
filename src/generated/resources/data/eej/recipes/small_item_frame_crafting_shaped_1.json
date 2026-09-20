@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "C": {
+      "item": "eej:small_item_frame"
+    }
+  },
+  "pattern": [
+    "C  "
+  ],
+  "result": {
+    "item": "eej:small_item_frame"
+  },
+  "show_notification": true
+}

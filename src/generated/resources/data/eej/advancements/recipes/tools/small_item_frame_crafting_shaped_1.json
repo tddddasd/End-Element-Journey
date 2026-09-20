@@ -1,0 +1,35 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_small_item_frame": {
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "eej:small_item_frame"
+            ]
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "eej:small_item_frame_crafting_shaped_1"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_small_item_frame",
+      "has_the_recipe"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "eej:small_item_frame_crafting_shaped_1"
+    ]
+  },
+  "sends_telemetry_event": false
+}

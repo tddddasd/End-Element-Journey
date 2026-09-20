@@ -1,0 +1,7 @@
+{
+  "parent": "eej:block/altar_pedestal_level_1",
+  "textures": {
+    "pedestal_particle": "minecraft:block/packed_mud",
+    "pedestal_material": "eej:block/packed_mud_pedestal"
+  }
+}

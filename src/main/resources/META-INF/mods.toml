@@ -1,0 +1,33 @@
+modLoader = "javafml"
+loaderVersion = "${loader_version_range}"
+license = "${mod_license}"
+
+[[mods]]
+modId = "eej"
+version = "${mod_version}"
+displayName = "End:Element Journey"
+displayURL = "https://space.bilibili.com/1446970336"
+logoFile = "eej_icon.png"
+authors = "${mod_authors}"
+description = '''${mod_description}'''
+
+[[dependencies.eej]]
+modId = "forge"
+mandatory = true
+versionRange = "${forge_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.eej]]
+modId = "minecraft"
+mandatory = true
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.eej]]
+modId = "jei"
+mandatory = false
+versionRange = "[15,)"
+ordering = "AFTER"
+side = "BOTH"
