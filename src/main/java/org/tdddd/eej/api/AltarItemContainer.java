@@ -1,6 +1,6 @@
 package org.tdddd.eej.api;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
@@ -24,13 +24,20 @@ public interface AltarItemContainer {
     void setMainPedestal(boolean main);
 
     
+    default boolean acceptsInsertion(ItemStack stack) {
+        if (isMainPedestal()) return true;
+        List<String> filters = getFilterData();
+        return filters == null || filters.isEmpty() || matchesFilter(stack, filters);
+    }
+
+    
     static boolean matchesFilter(ItemStack stack, List<String> filters) {
         if (filters == null || filters.isEmpty()) return true;
-        ResourceLocation stackId = stack.getItem().builtInRegistryHolder().key().location();
+        Identifier stackId = stack.getItem().builtInRegistryHolder().key().identifier();
         for (String filter : filters) {
             if (filter == null || filter.isEmpty()) continue;
             try {
-                if (stackId.equals(new ResourceLocation(filter))) return true;
+                if (stackId.equals(Identifier.parse(filter))) return true;
             } catch (Exception ignored) {
             }
         }

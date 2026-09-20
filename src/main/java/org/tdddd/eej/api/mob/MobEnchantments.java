@@ -1,11 +1,13 @@
 package org.tdddd.eej.api.mob;
 
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,7 +17,10 @@ import java.util.Map;
 
 
 public class MobEnchantments implements IMobEnchantments {
-    private final Map<Enchantment, MobEnchantment> entries = new LinkedHashMap<>();
+    
+    public static final String DATA_KEY = "eej_mob_enchantments";
+
+    private final Map<Holder<Enchantment>, MobEnchantment> entries = new LinkedHashMap<>();
 
     @Override
     public List<MobEnchantment> getAll() {
@@ -23,7 +28,7 @@ public class MobEnchantments implements IMobEnchantments {
     }
 
     @Override
-    public int getLevel(Enchantment enchantment) {
+    public int getLevel(Holder<Enchantment> enchantment) {
         MobEnchantment entry = entries.get(enchantment);
         return entry == null ? 0 : entry.getLevel();
     }
@@ -34,7 +39,7 @@ public class MobEnchantments implements IMobEnchantments {
     }
 
     @Override
-    public boolean apply(Enchantment enchantment, int level, int durationTicks) {
+    public boolean apply(Holder<Enchantment> enchantment, int level, int durationTicks) {
         if (enchantment == null || level <= 0) return false;
         MobEnchantment existing = entries.get(enchantment);
         int newLevel = existing == null ? level : Math.max(existing.getLevel(), level);
@@ -58,7 +63,7 @@ public class MobEnchantments implements IMobEnchantments {
     }
 
     @Override
-    public boolean remove(Enchantment enchantment) {
+    public boolean remove(Holder<Enchantment> enchantment) {
         return entries.remove(enchantment) != null;
     }
 
@@ -72,8 +77,7 @@ public class MobEnchantments implements IMobEnchantments {
     @Override
     public boolean tickDown() {
         if (entries.isEmpty()) return false;
-        boolean changed = entries.values().removeIf(MobEnchantment::tickDown);
-        return changed;
+        return entries.values().removeIf(MobEnchantment::tickDown);
     }
 
     @Override
@@ -98,7 +102,7 @@ public class MobEnchantments implements IMobEnchantments {
         CompoundTag tag = new CompoundTag();
         ListTag list = new ListTag();
         for (MobEnchantment entry : entries.values()) {
-            ResourceLocation id = ForgeRegistries.ENCHANTMENTS.getKey(entry.getEnchantment());
+            Identifier id = enchantmentRegistry().getKey(entry.getEnchantment().value());
             if (id == null) continue;
             CompoundTag entryTag = new CompoundTag();
             entryTag.putString("id", id.toString());
@@ -114,16 +118,38 @@ public class MobEnchantments implements IMobEnchantments {
     public void load(CompoundTag tag) {
         entries.clear();
         if (tag == null) return;
-        ListTag list = tag.getList("Enchantments", Tag.TAG_COMPOUND);
+        
+        
+        ListTag list = tag.getListOrEmpty("Enchantments");
+        Registry<Enchantment> registry = enchantmentRegistry();
         for (int i = 0; i < list.size(); i++) {
-            CompoundTag entryTag = list.getCompound(i);
-            ResourceLocation id = ResourceLocation.tryParse(entryTag.getString("id"));
+            CompoundTag entryTag = list.getCompoundOrEmpty(i);
+            
+            Identifier id = Identifier.tryParse(entryTag.getStringOr("id", ""));
             if (id == null) continue;
-            Enchantment enchantment = ForgeRegistries.ENCHANTMENTS.getValue(id);
+            Holder<Enchantment> enchantment = registry.get(id).orElse(null);
             if (enchantment == null) continue;
-            int level = Math.max(1, entryTag.getInt("level"));
-            int ticks = entryTag.contains("ticks") ? entryTag.getInt("ticks") : MobEnchantment.PERMANENT;
+            int level = Math.max(1, entryTag.getIntOr("level", 1));
+            int ticks = entryTag.contains("ticks") ? entryTag.getIntOr("ticks", MobEnchantment.PERMANENT) : MobEnchantment.PERMANENT;
             entries.put(enchantment, new MobEnchantment(enchantment, level, ticks));
         }
+    }
+
+    
+    private static Registry<Enchantment> enchantmentRegistry() {
+        return org.tdddd.eej.impl.registry.EejEnchantments.registry();
+    }
+
+    
+
+    @Override
+    public void serialize(ValueOutput output) {
+        output.store(DATA_KEY, CompoundTag.CODEC, save());
+    }
+
+    @Override
+    public void deserialize(ValueInput input) {
+        CompoundTag tag = input.read(DATA_KEY, CompoundTag.CODEC).orElse(null);
+        load(tag == null ? new CompoundTag() : tag);
     }
 }

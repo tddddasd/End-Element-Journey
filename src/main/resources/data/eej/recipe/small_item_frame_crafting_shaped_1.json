@@ -1,18 +1,14 @@
-{
+﻿{
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "key": {
-    "P": {
-      "item": "minecraft:packed_mud"
-    }
+    "C": "eej:small_item_frame"
   },
   "pattern": [
-    "PPP",
-    " P ",
-    "PPP"
+    "C  "
   ],
   "result": {
-    "item": "eej:packed_mud_pedestal"
+    "id": "eej:small_item_frame"
   },
   "show_notification": true
 }

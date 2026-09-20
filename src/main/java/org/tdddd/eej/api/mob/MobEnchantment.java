@@ -1,5 +1,6 @@
 package org.tdddd.eej.api.mob;
 
+import net.minecraft.core.Holder;
 import net.minecraft.world.item.enchantment.Enchantment;
 
 
@@ -7,17 +8,17 @@ public final class MobEnchantment {
     
     public static final int PERMANENT = -1;
 
-    private final Enchantment enchantment;
+    private final Holder<Enchantment> enchantment;
     private int level;
     private int remainingTicks;
 
-    public MobEnchantment(Enchantment enchantment, int level, int remainingTicks) {
+    public MobEnchantment(Holder<Enchantment> enchantment, int level, int remainingTicks) {
         this.enchantment = enchantment;
         this.level = Math.max(1, level);
         this.remainingTicks = remainingTicks < 0 ? PERMANENT : remainingTicks;
     }
 
-    public Enchantment getEnchantment() {
+    public Holder<Enchantment> getEnchantment() {
         return enchantment;
     }
 

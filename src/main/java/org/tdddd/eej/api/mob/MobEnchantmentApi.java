@@ -1,13 +1,13 @@
 package org.tdddd.eej.api.mob;
 
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.tdddd.eej.impl.capability.EejCapabilities;
-import org.tdddd.eej.impl.network.EejNetwork;
 import org.tdddd.eej.impl.network.MobEnchantmentSyncPacket;
 
 import java.util.List;
@@ -21,7 +21,7 @@ public final class MobEnchantmentApi {
     
     public static IMobEnchantments get(Entity entity) {
         if (entity == null) return null;
-        return entity.getCapability(EejCapabilities.MOB_ENCHANTMENTS).orElse(null);
+        return entity.getData(EejCapabilities.MOB_ENCHANTMENTS);
     }
 
     public static List<MobEnchantment> getAll(Entity entity) {
@@ -34,13 +34,13 @@ public final class MobEnchantmentApi {
         return data != null && data.hasAny();
     }
 
-    public static int getLevel(Entity entity, Enchantment enchantment) {
+    public static int getLevel(Entity entity, Holder<Enchantment> enchantment) {
         IMobEnchantments data = get(entity);
         return data == null ? 0 : data.getLevel(enchantment);
     }
 
     
-    public static boolean apply(LivingEntity entity, Enchantment enchantment, int level, int durationTicks) {
+    public static boolean apply(LivingEntity entity, Holder<Enchantment> enchantment, int level, int durationTicks) {
         IMobEnchantments data = get(entity);
         if (data == null) return false;
         if (!data.apply(enchantment, level, durationTicks)) return false;
@@ -48,7 +48,7 @@ public final class MobEnchantmentApi {
         return true;
     }
 
-    public static boolean remove(LivingEntity entity, Enchantment enchantment) {
+    public static boolean remove(LivingEntity entity, Holder<Enchantment> enchantment) {
         IMobEnchantments data = get(entity);
         if (data == null) return false;
         if (!data.remove(enchantment)) return false;
@@ -68,14 +68,13 @@ public final class MobEnchantmentApi {
     public static void sync(LivingEntity entity, IMobEnchantments data) {
         if (!(entity.level() instanceof ServerLevel)) return;
         if (data == null) return;
-        EejNetwork.INSTANCE.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> entity),
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(entity,
                 new MobEnchantmentSyncPacket(entity.getId(), data.getAll()));
     }
 
     
     public static void syncToPlayer(ServerPlayer player, LivingEntity entity, IMobEnchantments data) {
         if (data == null) return;
-        EejNetwork.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
-                new MobEnchantmentSyncPacket(entity.getId(), data.getAll()));
+        PacketDistributor.sendToPlayer(player, new MobEnchantmentSyncPacket(entity.getId(), data.getAll()));
     }
 }

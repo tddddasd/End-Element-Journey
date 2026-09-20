@@ -5,12 +5,12 @@ import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
-import net.minecraft.world.item.crafting.RecipeType;
 import org.tdddd.eej.impl.eej;
 
 import java.util.ArrayList;
@@ -22,8 +22,8 @@ import java.util.Map;
 @JeiPlugin
 public class EejJeiPlugin implements IModPlugin {
     @Override
-    public ResourceLocation getPluginUid() {
-        return new ResourceLocation(eej.MODID, "jei_plugin");
+    public Identifier getPluginUid() {
+        return Identifier.fromNamespaceAndPath(eej.MODID, "jei_plugin");
     }
 
     @Override
@@ -35,14 +35,20 @@ public class EejJeiPlugin implements IModPlugin {
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
-        RecipeManager manager = Minecraft.getInstance().level.getRecipeManager();
-        List<CraftingRecipe> recipes = manager.getAllRecipesFor(RecipeType.CRAFTING);
-        List<AltarCraftingRecipe> wrappers = new ArrayList<>();
+        if (Minecraft.getInstance().level == null) return;
+        if (!(Minecraft.getInstance().level.recipeAccess() instanceof RecipeManager manager)) {
+            
+            
+            return;
+        }
 
-        for (CraftingRecipe recipe : recipes) {
+        List<AltarCraftingRecipe> wrappers = new ArrayList<>();
+        for (RecipeHolder<?> holder : manager.getRecipes()) {
+            if (!(holder.value() instanceof CraftingRecipe recipe)) continue;
             if (recipe.isSpecial()) continue;
+
             Map<Ingredient, Integer> counts = new LinkedHashMap<>();
-            for (Ingredient ing : recipe.getIngredients()) {
+            for (Ingredient ing : recipe.placementInfo().ingredients()) {
                 if (!ing.isEmpty())
                     counts.put(ing, counts.getOrDefault(ing, 0) + 1);
             }
@@ -52,11 +58,19 @@ public class EejJeiPlugin implements IModPlugin {
             for (Map.Entry<Ingredient, Integer> e : counts.entrySet())
                 entries.add(new AltarCraftingRecipe.IngredientEntry(e.getKey(), e.getValue()));
 
-            ItemStack output = recipe.getResultItem(Minecraft.getInstance().level.registryAccess());
+            ItemStack output = recipe.assemble(emptyCraftingInput());
             if (!output.isEmpty())
                 wrappers.add(new AltarCraftingRecipe(entries, output));
         }
 
         registration.addRecipes(AltarCraftingCategory.TYPE, wrappers);
+    }
+
+    private static net.minecraft.world.item.crafting.CraftingInput emptyCraftingInput() {
+        List<ItemStack> empty = new ArrayList<>(9);
+        for (int i = 0; i < 9; i++) {
+            empty.add(ItemStack.EMPTY);
+        }
+        return net.minecraft.world.item.crafting.CraftingInput.of(3, 3, empty);
     }
 }

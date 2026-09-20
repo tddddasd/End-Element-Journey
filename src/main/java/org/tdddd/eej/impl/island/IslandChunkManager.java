@@ -36,7 +36,7 @@ public final class IslandChunkManager {
 
     
     public static int countBedrock(ServerLevel level, LevelChunk chunk) {
-        int minY = level.getMinBuildHeight();
+        int minY = level.getMinY();
         int minX = chunk.getPos().getMinBlockX();
         int minZ = chunk.getPos().getMinBlockZ();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
@@ -56,7 +56,7 @@ public final class IslandChunkManager {
 
     
     public static int countBottomLayer(ServerLevel level, LevelChunk chunk) {
-        int y = level.getMinBuildHeight();
+        int y = level.getMinY();
         int minX = chunk.getPos().getMinBlockX();
         int minZ = chunk.getPos().getMinBlockZ();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
@@ -76,24 +76,24 @@ public final class IslandChunkManager {
     public static IslandChunkData.ChunkRecord classify(ServerLevel level, LevelChunk chunk) {
         IslandChunkData data = IslandChunkData.get(level);
         ChunkPos pos = chunk.getPos();
-        IslandChunkData.ChunkRecord existing = data.get(pos.x, pos.z);
+        IslandChunkData.ChunkRecord existing = data.get(pos.x(), pos.z());
         if (existing != null) {
             return existing;
         }
         int bedrock = countBedrock(level, chunk);
         boolean vacuum = bedrock < ISLAND_MIN_BEDROCK;
-        data.put(pos.x, pos.z, bedrock, vacuum);
+        data.put(pos.x(), pos.z(), bedrock, vacuum);
         if (LOGGED_FIRST.compareAndSet(false, true)) {
             eej.LOGGER.info("[eej-island] {} 首个区块 {} 底部 {} 层基岩 = {}，{}",
-                    level.dimension().location(), pos, SCAN_HEIGHT, bedrock,
+                    level.dimension().identifier(), pos, SCAN_HEIGHT, bedrock,
                     vacuum ? "真空岛区块" : "非真空岛区块");
         }
-        return data.get(pos.x, pos.z);
+        return data.get(pos.x(), pos.z());
     }
 
     
     public static boolean isVacuumIsland(ServerLevel level, ChunkPos pos) {
-        IslandChunkData.ChunkRecord record = IslandChunkData.get(level).get(pos.x, pos.z);
+        IslandChunkData.ChunkRecord record = IslandChunkData.get(level).get(pos.x(), pos.z());
         return record != null && record.vacuum();
     }
 
@@ -103,8 +103,8 @@ public final class IslandChunkManager {
         int sum = 0;
         for (int dx = -VOID_RADIUS; dx <= VOID_RADIUS; dx++) {
             for (int dz = -VOID_RADIUS; dz <= VOID_RADIUS; dz++) {
-                int x = center.x + dx;
-                int z = center.z + dz;
+                int x = center.x() + dx;
+                int z = center.z() + dz;
                 LevelChunk chunk = level.getChunkSource().getChunkNow(x, z);
                 if (chunk == null) {
                     return null;
@@ -126,7 +126,7 @@ public final class IslandChunkManager {
         if (isVacuumIsland(level, pos)) {
             return false;
         }
-        LevelChunk self = level.getChunkSource().getChunkNow(pos.x, pos.z);
+        LevelChunk self = level.getChunkSource().getChunkNow(pos.x(), pos.z());
         if (self == null) {
             return false;
         }
@@ -140,8 +140,8 @@ public final class IslandChunkManager {
 
     
     public static float voidDamage(ServerLevel level, double y) {
-        double minY = level.getMinBuildHeight();
-        double height = Math.max(1.0, level.getMaxBuildHeight() - 1 - minY);
+        double minY = level.getMinY();
+        double height = Math.max(1.0, level.getMaxY() - minY);
         double percent = Mth.clamp((y - minY) / height, 0.0, 1.0);
         double damage = DAMAGE_MAX * (1.0 - (1.0 - DAMAGE_MIN_PERCENT) * percent);
         return (float) Mth.clamp(damage, DAMAGE_MAX * DAMAGE_MIN_PERCENT, DAMAGE_MAX);
@@ -149,10 +149,10 @@ public final class IslandChunkManager {
 
     
     public static IslandChunkData.ChunkRecord setVacuum(ServerLevel level, ChunkPos pos, boolean vacuum) {
-        LevelChunk chunk = level.getChunk(pos.x, pos.z);
+        LevelChunk chunk = level.getChunk(pos.x(), pos.z());
         IslandChunkData.ChunkRecord record = classify(level, chunk);
         IslandChunkData data = IslandChunkData.get(level);
-        data.put(pos.x, pos.z, record.bedrock(), vacuum);
-        return data.get(pos.x, pos.z);
+        data.put(pos.x(), pos.z(), record.bedrock(), vacuum);
+        return data.get(pos.x(), pos.z());
     }
 }

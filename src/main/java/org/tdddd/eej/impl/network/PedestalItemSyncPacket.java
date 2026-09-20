@@ -2,17 +2,24 @@ package org.tdddd.eej.impl.network;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.tdddd.eej.impl.altar.blockentity.PackedMudPedestalBlockEntity;
 
-import java.util.function.Supplier;
 
-public class PedestalItemSyncPacket {
+public class PedestalItemSyncPacket implements CustomPacketPayload {
+
+    public static final CustomPacketPayload.Type<PedestalItemSyncPacket> TYPE =
+            new CustomPacketPayload.Type<>(EejNetwork.id("pedestal_item"));
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, PedestalItemSyncPacket> STREAM_CODEC =
+            CustomPacketPayload.codec(PedestalItemSyncPacket::encode, PedestalItemSyncPacket::new);
+
     private final BlockPos pos;
     private final ItemStack stack;
 
@@ -21,26 +28,34 @@ public class PedestalItemSyncPacket {
         this.stack = stack.copy();
     }
 
-    public static void encode(PedestalItemSyncPacket pkt, FriendlyByteBuf buf) {
-        buf.writeBlockPos(pkt.pos);
-        buf.writeNbt(pkt.stack.save(new CompoundTag()));
+    public PedestalItemSyncPacket(RegistryFriendlyByteBuf buf) {
+        this.pos = buf.readBlockPos();
+        this.stack = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
     }
 
-    public static PedestalItemSyncPacket decode(FriendlyByteBuf buf) {
-        BlockPos pos = buf.readBlockPos();
-        ItemStack stack = ItemStack.of(buf.readNbt());
-        return new PedestalItemSyncPacket(pos, stack);
+    public void encode(RegistryFriendlyByteBuf buf) {
+        buf.writeBlockPos(this.pos);
+        ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, this.stack);
     }
 
-    public static void handle(PedestalItemSyncPacket pkt, Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-            if (Minecraft.getInstance().level != null) {
-                var be = Minecraft.getInstance().level.getBlockEntity(pkt.pos);
-                if (be instanceof PackedMudPedestalBlockEntity pedestal) {
-                    pedestal.syncItem(pkt.stack);
-                }
+    @Override
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+        return TYPE;
+    }
+
+    public void handle(IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            if (FMLEnvironment.getDist() != Dist.CLIENT) return;
+            handleClient();
+        });
+    }
+
+    private void handleClient() {
+        if (Minecraft.getInstance().level != null) {
+            var be = Minecraft.getInstance().level.getBlockEntity(this.pos);
+            if (be instanceof PackedMudPedestalBlockEntity pedestal) {
+                pedestal.syncItem(this.stack);
             }
-        }));
-        ctx.get().setPacketHandled(true);
+        }
     }
 }

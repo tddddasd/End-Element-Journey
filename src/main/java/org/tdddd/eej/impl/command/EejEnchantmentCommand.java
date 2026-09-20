@@ -9,13 +9,15 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.tdddd.eej.api.mob.MobEnchantment;
 import org.tdddd.eej.api.mob.MobEnchantmentApi;
 
@@ -29,16 +31,24 @@ public final class EejEnchantmentCommand {
             new DynamicCommandExceptionType(id -> Component.translatable("commands.eej.enchantment.unknown", id));
 
     private static final SuggestionProvider<CommandSourceStack> SUGGEST_ENCHANTMENTS =
-            (context, builder) -> SharedSuggestionProvider.suggestResource(ForgeRegistries.ENCHANTMENTS.getKeys(), builder);
+            (context, builder) -> SharedSuggestionProvider.suggestResource(
+                    context.getSource().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).keySet(), builder);
+
+    private static final java.util.concurrent.atomic.AtomicInteger APPLY_LOGGED = new java.util.concurrent.atomic.AtomicInteger();
 
     private EejEnchantmentCommand() {
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("eej_enchantment")
-                .requires(source -> source.hasPermission(2))
+                
+                
+                
+                .requires(Commands.hasPermission(new net.minecraft.server.permissions.PermissionCheck.Require(
+                        net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER)))
                 .then(Commands.argument("targets", EntityTargetArgument.entityTarget())
-                        .then(Commands.argument("enchantment", ResourceLocationArgument.id())
+                        
+                        .then(Commands.argument("enchantment", IdentifierArgument.id())
                                 .suggests(SUGGEST_ENCHANTMENTS)
                                 .then(Commands.argument("duration", IntegerArgumentType.integer())
                                         .then(Commands.argument("level", IntegerArgumentType.integer(0))
@@ -51,8 +61,10 @@ public final class EejEnchantmentCommand {
     private static int apply(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         CommandSourceStack source = context.getSource();
         List<LivingEntity> targets = livingTargets(context);
-        ResourceLocation enchantmentId = ResourceLocationArgument.getId(context, "enchantment");
-        Enchantment enchantment = ForgeRegistries.ENCHANTMENTS.getValue(enchantmentId);
+        Identifier enchantmentId = IdentifierArgument.getId(context, "enchantment");
+        
+        Registry<Enchantment> enchantmentRegistry = source.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
+        Holder<Enchantment> enchantment = enchantmentRegistry.get(enchantmentId).orElse(null);
         if (enchantment == null) {
             throw ERROR_UNKNOWN_ENCHANTMENT.create(enchantmentId);
         }
@@ -73,6 +85,11 @@ public final class EejEnchantmentCommand {
             if (MobEnchantmentApi.apply(target, enchantment, level, durationTicks)) {
                 changed++;
             }
+        }
+
+        if (changed > 0 && APPLY_LOGGED.incrementAndGet() <= 8) {
+            org.tdddd.eej.impl.eej.LOGGER.info("[eej-glint] 指令施加魔咒：{} 个目标，{} lv{}，时长 {} tick",
+                    changed, enchantmentId, level, durationTicks);
         }
 
         
@@ -97,7 +114,8 @@ public final class EejEnchantmentCommand {
 
         final int count = targets.size();
         final int effectiveLevel = resultLevel;
-        final Component name = enchantment.getFullname(effectiveLevel);
+        
+        final Component name = Enchantment.getFullname(enchantment, effectiveLevel);
         final Component durationText = resultPermanent
                 ? Component.translatable("commands.eej.enchantment.permanent")
                 : Component.translatable("commands.eej.enchantment.seconds", resultSeconds);
@@ -106,7 +124,7 @@ public final class EejEnchantmentCommand {
         return changed;
     }
 
-    private static int remove(CommandSourceStack source, List<LivingEntity> targets, Enchantment enchantment) {
+    private static int remove(CommandSourceStack source, List<LivingEntity> targets, Holder<Enchantment> enchantment) {
         if (targets.isEmpty()) {
             source.sendFailure(Component.translatable("commands.eej.enchantment.none"));
             return 0;
@@ -122,7 +140,7 @@ public final class EejEnchantmentCommand {
             return 0;
         }
         final int count = targets.size();
-        final Component name = enchantment.getFullname(1);
+        final Component name = Enchantment.getFullname(enchantment, 1);
         source.sendSuccess(() -> Component.translatable("commands.eej.enchantment.removed", count, name), true);
         return changed;
     }
@@ -160,9 +178,9 @@ public final class EejEnchantmentCommand {
         return living;
     }
 
-    private static MobEnchantment find(LivingEntity entity, Enchantment enchantment) {
+    private static MobEnchantment find(LivingEntity entity, Holder<Enchantment> enchantment) {
         for (MobEnchantment entry : MobEnchantmentApi.getAll(entity)) {
-            if (entry.getEnchantment() == enchantment) return entry;
+            if (entry.getEnchantment().equals(enchantment)) return entry;
         }
         return null;
     }

@@ -2,7 +2,8 @@ package org.tdddd.eej.impl.client;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 
 
 public class GlintBufferSource implements MultiBufferSource {
@@ -14,7 +15,7 @@ public class GlintBufferSource implements MultiBufferSource {
 
     @Override
     public VertexConsumer getBuffer(RenderType renderType) {
-        return delegate.getBuffer(isText(renderType) ? renderType : RenderType.entityGlint());
+        return delegate.getBuffer(isText(renderType) ? renderType : RenderTypes.entityGlint());
     }
 
     

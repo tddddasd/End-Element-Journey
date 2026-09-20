@@ -26,11 +26,22 @@ public class AltarStructure {
     public final int pedestalsWithItem;
     
     public final boolean isValidForCrafting;
+    
+    public final int requiredPoints;
 
+    
     public AltarStructure(Set<BlockPos> allPositions, int totalPoints, int pedestalCount,
                           boolean isValid, String invalidReason, BlockPos mainPedestal,
                           List<BlockPos> pedestalPositions, int pedestalsWithItem,
                           boolean isValidForCrafting) {
+        this(allPositions, totalPoints, pedestalCount, isValid, invalidReason, mainPedestal,
+                pedestalPositions, pedestalsWithItem, isValidForCrafting, 0);
+    }
+
+    public AltarStructure(Set<BlockPos> allPositions, int totalPoints, int pedestalCount,
+                          boolean isValid, String invalidReason, BlockPos mainPedestal,
+                          List<BlockPos> pedestalPositions, int pedestalsWithItem,
+                          boolean isValidForCrafting, int requiredPoints) {
         this.allPositions = allPositions;
         this.totalPoints = totalPoints;
         this.pedestalCount = pedestalCount;
@@ -40,5 +51,11 @@ public class AltarStructure {
         this.pedestalPositions = pedestalPositions != null ? pedestalPositions : Collections.emptyList();
         this.pedestalsWithItem = pedestalsWithItem;
         this.isValidForCrafting = isValidForCrafting;
+        this.requiredPoints = requiredPoints;
+    }
+
+    
+    public boolean hasEnoughPoints() {
+        return this.totalPoints >= this.requiredPoints;
     }
 }

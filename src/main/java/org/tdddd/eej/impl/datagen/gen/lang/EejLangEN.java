@@ -1,7 +1,7 @@
 package org.tdddd.eej.impl.datagen.gen.lang;
 
 import net.minecraft.data.PackOutput;
-import net.minecraftforge.common.data.LanguageProvider;
+import net.neoforged.neoforge.common.data.LanguageProvider;
 import org.tdddd.eej.impl.eej;
 import org.tdddd.eej.impl.registry.EejBlocks;
 import org.tdddd.eej.impl.registry.EejItems;
@@ -41,6 +41,21 @@ public class EejLangEN extends LanguageProvider {
         add("commands.eej.enchantment.permanent", "permanent");
         add("commands.eej.enchantment.seconds", "%s s");
 
+        // Altar crafting feedback (AbstractAltarBlock / CraftingOutcome)
+        // Argument counts must match the Component.translatable calls
+        add("altar.eej.no_material", "No material on the altar");
+        add("altar.eej.no_recipe", "No matching altar recipe");
+        add("altar.eej.points_insufficient", "Not enough altar points (need %s, have %s)");
+        add("altar.eej.not_main_pedestal", "Use the main pedestal (%s %s %s)");
+        add("altar.eej.not_main_pedestal_unknown", "This is not the main pedestal");
+        add("altar.eej.structure_invalid", "Invalid altar structure");
+        add("altar.eej.structure_invalid_reason", "Invalid altar structure: %s");
+        add("altar.eej.filter_rejected", "This item is rejected by the pedestal filter (%s)");
+        add("altar.eej.filter_cleared", "Cleared this pedestal's filter");
+
+        // JEI altar crafting category hint
+        add("jei.eej.altar_crafting.hint", "Place the materials on any pedestals - order does not matter");
+
         // Vacuum island / void chunk
         add("commands.eej.island.info", "Chunk %s,%s: bottom-layer bedrock %s, 3x3 non-vacuum bottom total %s, %s");
         add("commands.eej.island.set.vacuum", "Chunk %s,%s is now a vacuum-island chunk");
@@ -49,6 +64,5 @@ public class EejLangEN extends LanguageProvider {
         add("commands.eej.island.status.void", "void chunk");
         add("commands.eej.island.status.nonvacuum", "non-vacuum island");
         add("commands.eej.island.unknown", "not classified");
-        add("commands.eej.island.needs_pos", "A position is required when run from the console");
-    }
+        add("commands.eej.island.needs_pos", "A position is required when run from the console");    }
 }

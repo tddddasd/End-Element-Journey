@@ -1,4 +1,13 @@
 {
+  "altar.eej.filter_cleared": "Cleared this pedestal's filter",
+  "altar.eej.filter_rejected": "This item is rejected by the pedestal filter (%s)",
+  "altar.eej.no_material": "No material on the altar",
+  "altar.eej.no_recipe": "No matching altar recipe",
+  "altar.eej.not_main_pedestal": "Use the main pedestal (%s %s %s)",
+  "altar.eej.not_main_pedestal_unknown": "This is not the main pedestal",
+  "altar.eej.points_insufficient": "Not enough altar points (need %s, have %s)",
+  "altar.eej.structure_invalid": "Invalid altar structure",
+  "altar.eej.structure_invalid_reason": "Invalid altar structure: %s",
   "block.eej.packed_mud_altar_stone": "Packed Mud Altar Stone",
   "block.eej.packed_mud_pedestal": "Packed Mud Pedestal",
   "category.eej.altar_crafting": "Altar Crafting",
@@ -24,5 +33,6 @@
   "item.small_item_frame.count": "%d/%d stored",
   "item.small_item_frame.max_reached": "Cannot add (limit reached or duplicate)",
   "item.small_item_frame.no_offhand": "No item in offhand",
-  "itemGroup.eej.main_tab": "End:Element Journey"
+  "itemGroup.eej.main_tab": "End:Element Journey",
+  "jei.eej.altar_crafting.hint": "Place the materials on any pedestals - order does not matter"
 }

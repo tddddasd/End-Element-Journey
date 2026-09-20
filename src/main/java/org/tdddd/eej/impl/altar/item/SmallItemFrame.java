@@ -3,11 +3,8 @@ package org.tdddd.eej.impl.altar.item;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.StringTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -17,43 +14,37 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import org.tdddd.eej.api.AltarItemContainer;
 import org.tdddd.eej.impl.altar.AbstractAltarBlock;
+import org.tdddd.eej.impl.registry.EejDataComponents;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 
 public class SmallItemFrame extends Item {
     private static final int MAX_IDS = 9;
+    
+    private static final String SEPARATOR = "\n";
 
     public SmallItemFrame(Properties properties) {
         super(properties);
     }
 
     
+
     public static List<String> getItemIds(ItemStack stack) {
-        if (!stack.hasTag() || !stack.getTag().contains("item_ids")) {
-            return new ArrayList<>();
-        }
-        ListTag listTag = stack.getTag().getList("item_ids", Tag.TAG_STRING);
-        List<String> ids = new ArrayList<>();
-        for (Tag tag : listTag) {
-            ids.add(tag.getAsString());
-        }
-        return ids;
+        List<String> stored = stack.get(EejDataComponents.SMALL_ITEM_FRAME_IDS.get());
+        return stored == null ? new ArrayList<>() : new ArrayList<>(stored);
     }
 
     public static void setItemIds(ItemStack stack, List<String> ids) {
-        ListTag listTag = new ListTag();
-        for (String id : ids) {
-            listTag.add(StringTag.valueOf(id));
-        }
-        stack.getOrCreateTag().put("item_ids", listTag);
+        stack.set(EejDataComponents.SMALL_ITEM_FRAME_IDS.get(), List.copyOf(ids));
     }
 
     public static boolean addItemId(ItemStack stack, String id) {
@@ -65,6 +56,21 @@ public class SmallItemFrame extends Item {
         return true;
     }
 
+    
+    public static List<String> parseIds(String raw) {
+        List<String> ids = new ArrayList<>();
+        if (raw == null || raw.isEmpty()) return ids;
+        for (String part : raw.split(SEPARATOR)) {
+            if (!part.isEmpty()) ids.add(part);
+        }
+        return ids;
+    }
+
+    
+    public static String joinIds(List<String> ids) {
+        return String.join(SEPARATOR, ids);
+    }
+
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();
@@ -74,7 +80,7 @@ public class SmallItemFrame extends Item {
 
         BlockState state = level.getBlockState(pos);
         if (state.getBlock() instanceof AbstractAltarBlock) {
-            if (!level.isClientSide && player instanceof ServerPlayer) {
+            if (!level.isClientSide() && player instanceof ServerPlayer) {
                 ItemStack stack = context.getItemInHand();
                 List<String> ids = getItemIds(stack);
                 if (level.getBlockEntity(pos) instanceof AltarItemContainer pedestal) {
@@ -87,44 +93,47 @@ public class SmallItemFrame extends Item {
         }
 
         ItemStack stack = player.getItemInHand(InteractionHand.MAIN_HAND);
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
 
         ItemStack offhand = player.getOffhandItem();
         if (!offhand.isEmpty()) {
-            ResourceLocation id = BuiltInRegistries.ITEM.getKey(offhand.getItem());
+            Identifier id = BuiltInRegistries.ITEM.getKey(offhand.getItem());
             if (id != null) {
                 String idStr = id.toString();
                 if (addItemId(stack, idStr)) {
-                    player.displayClientMessage(
-                            Component.translatable("item.small_item_frame.added", idStr), true);
+                    
+                    
+                    player.sendSystemMessage(
+                            Component.translatable("item.small_item_frame.added", idStr));
                     return InteractionResult.SUCCESS;
                 } else {
-                    player.displayClientMessage(
-                            Component.translatable("item.small_item_frame.max_reached"), true);
+                    player.sendSystemMessage(
+                            Component.translatable("item.small_item_frame.max_reached"));
                     return InteractionResult.FAIL;
                 }
             }
         } else {
-            player.displayClientMessage(
-                    Component.translatable("item.small_item_frame.no_offhand"), true);
+            player.sendSystemMessage(
+                    Component.translatable("item.small_item_frame.no_offhand"));
             return InteractionResult.FAIL;
         }
         return InteractionResult.SUCCESS;
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display,
+                                Consumer<Component> tooltip, TooltipFlag flag) {
         List<String> ids = getItemIds(stack);
         if (!ids.isEmpty()) {
             for (String id : ids) {
-                tooltip.add(Component.literal(" - " + id)
+                tooltip.accept(Component.literal(" - " + id)
                         .withStyle(ChatFormatting.DARK_PURPLE, ChatFormatting.ITALIC));
             }
-            tooltip.add(Component.translatable("item.small_item_frame.count", ids.size(), MAX_IDS)
+            tooltip.accept(Component.translatable("item.small_item_frame.count", ids.size(), MAX_IDS)
                     .withStyle(ChatFormatting.GRAY));
         }
-        super.appendHoverText(stack, level, tooltip, flag);
+        super.appendHoverText(stack, context, display, tooltip, flag);
     }
 }

@@ -1,10 +1,8 @@
-{
+﻿{
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "key": {
-    "P": {
-      "item": "minecraft:packed_mud"
-    }
+    "P": "minecraft:packed_mud"
   },
   "pattern": [
     "PPP",
@@ -13,7 +11,7 @@
   ],
   "result": {
     "count": 4,
-    "item": "eej:packed_mud_altar_stone"
+    "id": "eej:packed_mud_altar_stone"
   },
   "show_notification": true
 }

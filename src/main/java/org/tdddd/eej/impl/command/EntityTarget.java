@@ -2,7 +2,8 @@ package org.tdddd.eej.impl.command;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -25,6 +26,7 @@ public interface EntityTarget {
 
         @Override
         public List<Entity> resolve(CommandSourceStack source) throws CommandSyntaxException {
+            
             return new ArrayList<>(selector.findEntities(source));
         }
     }
@@ -74,6 +76,7 @@ public interface EntityTarget {
         @Override
         public List<Entity> resolve(CommandSourceStack source) {
             List<Entity> found = new ArrayList<>();
+            
             for (Entity entity : source.getLevel().getAllEntities()) {
                 if (entity.getType() == type) found.add(entity);
             }
@@ -93,9 +96,11 @@ public interface EntityTarget {
         public List<Entity> resolve(CommandSourceStack source) {
             List<Entity> found = new ArrayList<>();
             for (Entity entity : source.getLevel().getAllEntities()) {
-                ResourceLocation key = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(entity.getType());
+                // 26.1.2: ForgeRegistries.ENTITY_TYPES.getKey(...) -> BuiltInRegistries.ENTITY_TYPE.getKey(...)
+                Identifier key = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
                 if (key != null && key.getNamespace().equals(modId)) found.add(entity);
-            }            return found;
+            }
+            return found;
         }
     }
 }

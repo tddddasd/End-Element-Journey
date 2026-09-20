@@ -1,37 +1,52 @@
 package org.tdddd.eej.impl.island;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
 public class IslandChunkData extends SavedData {
 
-    private static final String DATA_NAME = "eej_island_chunks";
+    public static final Identifier DATA_ID = Identifier.fromNamespaceAndPath("eej", "island_chunks");
 
     
     public record ChunkRecord(int x, int z, int bedrock, boolean vacuum) {
+        public static final Codec<ChunkRecord> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.INT.fieldOf("x").forGetter(ChunkRecord::x),
+                Codec.INT.fieldOf("z").forGetter(ChunkRecord::z),
+                Codec.INT.fieldOf("bedrock").forGetter(ChunkRecord::bedrock),
+                Codec.BOOL.fieldOf("vacuum").forGetter(ChunkRecord::vacuum)
+        ).apply(i, ChunkRecord::new));
     }
+
+    public static final Codec<IslandChunkData> CODEC = RecordCodecBuilder.create(i -> i.group(
+            ChunkRecord.CODEC.listOf().optionalFieldOf("chunks", List.of()).forGetter(IslandChunkData::records)
+    ).apply(i, IslandChunkData::new));
+
+    public static final SavedDataType<IslandChunkData> TYPE =
+            new SavedDataType<>(DATA_ID, IslandChunkData::new, CODEC);
 
     private final Map<Long, ChunkRecord> chunks = new HashMap<>();
 
     public IslandChunkData() {
     }
 
-    
-    public IslandChunkData(CompoundTag nbt) {
-        ListTag list = nbt.getList("chunks", Tag.TAG_COMPOUND);
-        for (int i = 0; i < list.size(); i++) {
-            CompoundTag tag = list.getCompound(i);
-            int x = tag.getInt("x");
-            int z = tag.getInt("z");
-            chunks.put(key(x, z), new ChunkRecord(x, z, tag.getInt("bedrock"), tag.getBoolean("vacuum")));
+    private IslandChunkData(List<ChunkRecord> list) {
+        for (ChunkRecord record : list) {
+            chunks.put(key(record.x(), record.z()), record);
         }
+    }
+
+    private List<ChunkRecord> records() {
+        return new ArrayList<>(chunks.values());
     }
 
     
@@ -39,24 +54,8 @@ public class IslandChunkData extends SavedData {
         return ((long) x << 32) ^ (z & 0xFFFFFFFFL);
     }
 
-    @Override
-    public CompoundTag save(CompoundTag nbt) {
-        ListTag list = new ListTag();
-        for (ChunkRecord record : chunks.values()) {
-            CompoundTag tag = new CompoundTag();
-            tag.putInt("x", record.x());
-            tag.putInt("z", record.z());
-            tag.putInt("bedrock", record.bedrock());
-            tag.putBoolean("vacuum", record.vacuum());
-            list.add(tag);
-        }
-        nbt.put("chunks", list);
-        return nbt;
-    }
-
     public static IslandChunkData get(ServerLevel level) {
-        return level.getDataStorage()
-                .computeIfAbsent(IslandChunkData::new, IslandChunkData::new, DATA_NAME);
+        return level.getDataStorage().computeIfAbsent(TYPE);
     }
 
     

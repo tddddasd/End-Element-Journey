@@ -9,11 +9,12 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.selector.EntitySelectorParser;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.fml.ModList;
 
 import java.util.List;
 import java.util.Locale;
@@ -63,18 +64,18 @@ public class EntityTargetArgument implements ArgumentType<EntityTarget> {
             
         }
 
-        ResourceLocation id = ResourceLocation.tryParse(raw.contains(":") ? raw : "minecraft:" + raw);
+        Identifier id = Identifier.tryParse(raw.contains(":") ? raw : "minecraft:" + raw);
         
         
-        if (id != null && ForgeRegistries.ENTITY_TYPES.containsKey(id)) {
-            EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(id);
+        if (id != null && BuiltInRegistries.ENTITY_TYPE.containsKey(id)) {
+            EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getValue(id);
             if (type != null) {
                 return new EntityTarget.TypeTarget(type);
             }
         }
 
         
-        if (!raw.contains(":") && net.minecraftforge.fml.ModList.get().isLoaded(raw)) {
+        if (!raw.contains(":") && ModList.get().isLoaded(raw)) {
             return new EntityTarget.ModTarget(raw);
         }
 
@@ -119,7 +120,7 @@ public class EntityTargetArgument implements ArgumentType<EntityTarget> {
         }
 
         
-        for (ResourceLocation id : ForgeRegistries.ENTITY_TYPES.getKeys()) {
+        for (Identifier id : BuiltInRegistries.ENTITY_TYPE.keySet()) {
             String full = id.toString();
             if (prefix.isEmpty() || full.toLowerCase(Locale.ROOT).startsWith(prefix)) {
                 builder.suggest(full);
@@ -141,7 +142,7 @@ public class EntityTargetArgument implements ArgumentType<EntityTarget> {
         Set<String> cached = entityNamespaces;
         if (cached == null) {
             Set<String> namespaces = new TreeSet<>();
-            for (ResourceLocation id : ForgeRegistries.ENTITY_TYPES.getKeys()) {
+            for (Identifier id : BuiltInRegistries.ENTITY_TYPE.keySet()) {
                 namespaces.add(id.getNamespace());
             }
             cached = namespaces;
