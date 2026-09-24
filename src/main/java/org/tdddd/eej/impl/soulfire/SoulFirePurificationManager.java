@@ -28,10 +28,10 @@ import net.minecraft.world.phys.AABB;
  * The soul fire purification mechanic.
  *
  * <p>An item entity that overlaps {@code minecraft:soul_fire} is looked up in the loaded
- * {@code eej:soul_fire_purification} recipes. Every single item of the stack rolls on its own: a successful roll
- * spawns that item's drops and consumes it, a failed roll leaves the item where it is and it is rolled again on
- * the shared {@value #PROCESS_INTERVAL_TICKS}-tick cadence until it produces something. Nothing is ever burned
- * away by the mechanic, so a stack only shrinks by the items that actually yielded something.
+ * {@code eej:soul_fire_purification} recipes. Every single item of the stack rolls on its own, and the recipe's
+ * chance is the chance that <b>one purification attempt</b> yields something: a successful roll spawns the
+ * drops and converts the item, a failed roll burns it away. Nothing lingers, so the configured chance is
+ * exactly the chance the player gets.
  *
  * <p>An item entity that overlaps {@code minecraft:fire} only triggers the recipe's optional {@code explode}
  * block. Soul fire does the same and additionally applies Blindness I inside the explosion radius.
@@ -54,7 +54,7 @@ import net.minecraft.world.phys.AABB;
  * {@link WeakHashMap}, so a datapack reload (which builds a fresh recipe manager) invalidates it automatically.
  */
 public final class SoulFirePurificationManager {
-    /** Ticks between two purification rolls, matching the 1.20.1 scan interval. */
+    /** How long an item may sit in the soul fire before its purification attempt, matching the 1.20.1 scan. */
     public static final int PROCESS_INTERVAL_TICKS = 10;
 
     /** Persistent-data key marking an item entity whose invulnerability was set by this manager. */
@@ -199,7 +199,7 @@ public final class SoulFirePurificationManager {
                 // Must survive long enough to reach its own detonation.
                 protect = true;
             } else if (soulFire) {
-                // Waits in the soul fire until a roll produces something.
+                // Waits in the soul fire for the cadence tick that rolls it.
                 protect = true;
             }
         }
@@ -227,8 +227,10 @@ public final class SoulFirePurificationManager {
     }
 
     /**
-     * Rolls the recipe once per item of the stack. An item that produces nothing is left alone: the stack only
-     * shrinks by the items that actually yielded a drop, and anything left is rolled again on the next cadence.
+     * Rolls the recipe once per item of the stack. The JSON chance is the chance that <b>one purification
+     * attempt</b> yields something: an item that produces a drop is converted into it, an item that produces
+     * nothing is burned away by the mechanic. The fire itself can no longer take the item first, which is what
+     * {@link #updateProtection} is for, so the configured chance is always the chance the player actually gets.
      */
     private static void purify(ServerLevel level, ItemEntity itemEntity, SoulFirePurificationRecipe recipe) {
         int pending = itemEntity.getItem().getCount();
@@ -237,20 +239,24 @@ public final class SoulFirePurificationManager {
             if (itemEntity.isRemoved() || itemEntity.getItem().isEmpty()) {
                 break;
             }
-            if (!rollOnce(level, itemEntity, recipe)) {
-                continue;
+            if (rollOnce(level, itemEntity, recipe)) {
+                producedAny = true;
             }
-            producedAny = true;
-            ItemStack rest = itemEntity.getItem().copy();
-            rest.shrink(1);
-            if (rest.isEmpty()) {
-                itemEntity.discard();
-            } else {
-                itemEntity.setItem(rest);
-            }
+            consumeOne(itemEntity);
         }
         if (producedAny) {
             playSoulFireFeedback(level, itemEntity);
+        }
+    }
+
+    /** Removes exactly one item from the entity, discarding the entity when it becomes empty. */
+    private static void consumeOne(ItemEntity itemEntity) {
+        ItemStack rest = itemEntity.getItem().copy();
+        rest.shrink(1);
+        if (rest.isEmpty()) {
+            itemEntity.discard();
+        } else {
+            itemEntity.setItem(rest);
         }
     }
 
