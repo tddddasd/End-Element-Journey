@@ -36,5 +36,8 @@ public class EejDataGenEvent {
 
         
         event.getGenerator().addProvider(event.includeServer(), new EejAltarPointData(out));
+
+        
+        event.getGenerator().addProvider(event.includeServer(), new EejSoulFireDocData(out));
     }
 }

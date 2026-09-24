@@ -23,6 +23,11 @@ public class EejLangEN extends LanguageProvider {
 
         // JEI category
         add("category.eej.altar_crafting", "Altar Crafting");
+        add("category.eej.soul_fire_purification", "Soul Fire Purification");
+
+        // JEI soul fire purification tooltips
+        add("jei.eej.soul_fire_purification.destroyed", "Destroyed, nothing is produced");
+        add("jei.eej.soul_fire_purification.explodes", "Explodes on contact with fire");
 
         // Small item frame tooltips
         add("item.small_item_frame.added", "Recorded: %s");

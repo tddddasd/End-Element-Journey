@@ -2,6 +2,7 @@
   "block.eej.packed_mud_altar_stone": "Packed Mud Altar Stone",
   "block.eej.packed_mud_pedestal": "Packed Mud Pedestal",
   "category.eej.altar_crafting": "Altar Crafting",
+  "category.eej.soul_fire_purification": "Soul Fire Purification",
   "commands.eej.enchantment.cleared": "Cleared all mob enchantments from %s creature(s)",
   "commands.eej.enchantment.no_effect": "Nothing to change on %s creature(s): already at the same or higher level with equal or longer duration, or the enchantment is not present",
   "commands.eej.enchantment.none": "No valid living target found",
@@ -24,5 +25,7 @@
   "item.small_item_frame.count": "%d/%d stored",
   "item.small_item_frame.max_reached": "Cannot add (limit reached or duplicate)",
   "item.small_item_frame.no_offhand": "No item in offhand",
-  "itemGroup.eej.main_tab": "End:Element Journey"
+  "itemGroup.eej.main_tab": "End:Element Journey",
+  "jei.eej.soul_fire_purification.destroyed": "Destroyed, nothing is produced",
+  "jei.eej.soul_fire_purification.explodes": "Explodes on contact with fire"
 }

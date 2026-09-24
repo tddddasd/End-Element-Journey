@@ -23,6 +23,7 @@ import org.tdddd.eej.impl.registry.EejBlockEntities;
 import org.tdddd.eej.impl.registry.EejBlocks;
 import org.tdddd.eej.impl.registry.EejCreativeTabs;
 import org.tdddd.eej.impl.registry.EejItems;
+import org.tdddd.eej.impl.registry.EejRecipes;
 
 
 @Mod(eej.MODID)
@@ -44,6 +45,7 @@ public class eej {
         EejBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         EejItems.ITEMS.register(modEventBus);
         EejCreativeTabs.CREATIVE_TABS.register(modEventBus);
+        EejRecipes.register(modEventBus);
 
         MinecraftForge.EVENT_BUS.addListener(this::onAddReloadListeners);
         MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
