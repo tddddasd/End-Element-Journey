@@ -46,7 +46,7 @@ public record SoulFireFixedDrop(Holder<Item> item, int count, int countMax) {
         return countMax <= count ? count : count + random.nextInt(countMax - count + 1);
     }
 
-    /** Builds the stack that is spawned in the world (fire immunity is attached by the caller). */
+    /** Builds the stack that is spawned in the world (the caller marks the spawned entity, never the stack). */
     public ItemStack createStack(RandomSource random) {
         return new ItemStack(item, rollCount(random));
     }

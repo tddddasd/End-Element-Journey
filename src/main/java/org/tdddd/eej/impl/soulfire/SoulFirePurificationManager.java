@@ -15,8 +15,6 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -113,13 +111,10 @@ public final class SoulFirePurificationManager {
             return;
         }
 
-        // 1. Drop the fire immunity marker once its 30 s window has elapsed. The stack is replaced with a
-        //    modified copy so the synched entity data notices the change.
-        if (SoulFireImmunity.isExpired(level, stack)) {
-            ItemStack refreshed = stack.copy();
-            SoulFireImmunity.clear(refreshed);
-            itemEntity.setItem(refreshed);
-            stack = refreshed;
+        // 1. Drop the fire immunity marker once its 30 s window has elapsed. The marker lives on the
+        //    entity, so the stack itself is never touched and stays stackable.
+        if (SoulFireImmunity.isExpired(level, itemEntity)) {
+            SoulFireImmunity.clear(itemEntity);
         }
 
         // 2. Fire / soul fire processing.
@@ -168,7 +163,7 @@ public final class SoulFirePurificationManager {
             return;
         }
         SoulFirePurificationRecipe recipe = index(level.recipeAccess()).find(stack);
-        if (recipe == null && !SoulFireImmunity.isMarked(stack)) {
+        if (recipe == null && !SoulFireImmunity.isMarked(itemEntity)) {
             if (itemEntity.isInvulnerable()) {
                 setProtected(itemEntity, false);
             }
@@ -189,7 +184,7 @@ public final class SoulFirePurificationManager {
      */
     private static void updateProtection(ItemEntity itemEntity, ItemStack stack,
                                          SoulFirePurificationRecipe recipe, boolean soulFire, boolean inFire) {
-        boolean marked = SoulFireImmunity.isMarked(stack);
+        boolean marked = SoulFireImmunity.isMarked(itemEntity);
         if (recipe == null && !marked) {
             // Cheap path: nothing of ours, so only pick up a flag we left behind earlier.
             if (itemEntity.isInvulnerable()) {
@@ -228,20 +223,6 @@ public final class SoulFirePurificationManager {
         } else if (itemEntity.getPersistentData().getBooleanOr(PROTECTED_KEY, false)) {
             itemEntity.setInvulnerable(false);
             itemEntity.getPersistentData().remove(PROTECTED_KEY);
-        }
-    }
-
-    /** Removes expired fire immunity markers from a player's inventory (called every 20 ticks). */
-    public static void expireInventory(ServerLevel level, Player player) {
-        Inventory inventory = player.getInventory();
-        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
-            ItemStack stack = inventory.getItem(slot);
-            if (stack.isEmpty() || !SoulFireImmunity.isExpired(level, stack)) {
-                continue;
-            }
-            ItemStack refreshed = stack.copy();
-            SoulFireImmunity.clear(refreshed);
-            inventory.setItem(slot, refreshed);
         }
     }
 
@@ -291,8 +272,12 @@ public final class SoulFirePurificationManager {
     }
 
     private static void spawnPurified(ServerLevel level, ItemEntity source, ItemStack stack) {
-        SoulFireImmunity.mark(level, stack);
         ItemEntity created = new ItemEntity(level, source.getX(), source.getY() + 0.25D, source.getZ(), stack);
+        // The immunity lives on the entity, so the stack stays plain and stacks normally once picked up.
+        SoulFireImmunity.mark(level, created);
+        // Protected from its very first tick: it spawns inside the soul fire that just consumed the input,
+        // and the pre-tick hook only runs on the next tick.
+        setProtected(created, true);
         level.addFreshEntity(created);
     }
 
