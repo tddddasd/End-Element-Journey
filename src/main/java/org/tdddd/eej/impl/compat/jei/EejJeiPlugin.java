@@ -129,6 +129,11 @@ public class EejJeiPlugin implements IModPlugin {
                     }
                 }
 
+                // Recipes that can never produce an item - the explosive coal entries and the
+                // "destroyed" ones - are left out of the JEI list entirely: a recipe browser should only
+                // offer transformations that yield something.
+                if (entries.isEmpty()) continue;
+
                 float explosionPower = 0.0F;
                 boolean explosionFire = false;
                 int blindnessTicks = 0;

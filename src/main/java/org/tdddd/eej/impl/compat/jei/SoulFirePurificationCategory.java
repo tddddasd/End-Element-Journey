@@ -117,19 +117,9 @@ public class SoulFirePurificationCategory implements IRecipeCategory<SoulFirePur
     public void setRecipe(IRecipeLayoutBuilder builder, SoulFirePurificationJeiRecipe recipe, IFocusGroup focuses) {
         builder.addSlot(RecipeIngredientRole.INPUT, INPUT_X, ROW_Y).addItemStack(recipe.getInput());
 
+        // Only recipes that yield something reach JEI (see EejJeiPlugin): one slot per output roll, each
+        // cycling through its own candidates.
         List<SoulFirePurificationJeiRecipe.Entry> outputs = recipe.getOutputs();
-        if (outputs.isEmpty()) {
-            // Explosive / destroy-only rule: no roll, so the outcome is shown as a symbol only.
-            boolean explosive = recipe.isExplosive();
-            builder.addSlot(RecipeIngredientRole.RENDER_ONLY, outputX, ROW_Y)
-                    .addItemStack(new ItemStack(explosive ? Items.TNT : Items.FIRE_CHARGE))
-                    .addTooltipCallback((view, tooltip) -> tooltip.add(Component.translatable(
-                            explosive
-                                    ? "jei.eej.soul_fire_purification.explodes"
-                                    : "jei.eej.soul_fire_purification.destroyed")));
-            return;
-        }
-
         for (int index = 0; index < outputs.size() && index < COLUMNS; index++) {
             SoulFirePurificationJeiRecipe.Entry entry = outputs.get(index);
             IRecipeSlotBuilder slot = builder.addSlot(RecipeIngredientRole.OUTPUT, slotX(index), ROW_Y)

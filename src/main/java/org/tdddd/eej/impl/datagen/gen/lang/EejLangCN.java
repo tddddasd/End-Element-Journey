@@ -25,11 +25,6 @@ public class EejLangCN extends LanguageProvider {
         add("category.eej.altar_crafting", "祭坛合成");
         add("category.eej.soul_fire_purification", "灵魂火净化");
 
-        
-        add("jei.eej.soul_fire_purification.destroyed", "直接销毁，不产出任何物品");
-        add("jei.eej.soul_fire_purification.explodes", "接触火焰时立即爆炸");
-
-        
         add("item.small_item_frame.added", "已记录：%s");
         add("item.small_item_frame.max_reached", "无法添加（已达上限或已存在）");
         add("item.small_item_frame.no_offhand", "副手无物品");
