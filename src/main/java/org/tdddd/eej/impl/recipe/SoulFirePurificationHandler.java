@@ -22,7 +22,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -64,9 +63,9 @@ public final class SoulFirePurificationHandler {
     public static final int PROCESS_INTERVAL_TICKS = 10;
     /** Fire / lava immunity granted to freshly purified drops, in ticks. */
     public static final int IMMUNITY_TICKS = 600;
-    /** NBT flag marking a stack that came out of purification. */
+    /** Entity persistent-data flag marking a drop that came out of purification. */
     public static final String TAG_PURIFIED = "eej_soul_fire_purified";
-    /** NBT flag holding the server game time until which the stack ignores fire and lava. */
+    /** Entity persistent-data key holding the game time until which a fresh drop ignores fire and lava. */
     public static final String TAG_FIRE_IMMUNE_UNTIL = "eej_soul_fire_immune_until";
     /** Damage multiplier of the extra custom damage sweep (falls off linearly with distance). */
     private static final double EXPLOSION_DAMAGE_SCALE = 14.0D;
@@ -107,14 +106,17 @@ public final class SoulFirePurificationHandler {
     // ---------------------------------------------------------------- fire immunity
 
     /**
-     * Per-tick item entity sweep that keeps purified stacks immune: the remaining fire ticks of a
-     * marked stack are pinned to zero, so neither {@code minecraft:on_fire} damage nor
-     * {@code Entity#lavaHurt()} can destroy it, and the marker is dropped once the deadline has
-     * passed. The same pass runs {@link #updateFireProtection}, which keeps inputs and explosives
-     * alive against the fire block's per-tick damage.
+     * Per-tick item entity sweep for fire protection: it expires the 30 s immunity of purified drops
+     * and runs {@link #updateFireProtection}, which keeps inputs, explosives and fresh drops alive
+     * against the fire block's per-tick damage.
+     *
+     * <p>Everything is stored in the <b>entity's</b> persistent data, never on the stack: a purified
+     * drop is therefore a completely ordinary item, so it merges and stacks with the player's existing
+     * items (any stack tag or data component would make {@code ItemStack#isSameItemSameTags} fail and
+     * leave the player with separate, non-merging slots).</p>
      */
     @SubscribeEvent
-    public static void onServerTickFireImmunity(TickEvent.ServerTickEvent event) {
+    public static void onServerTickFireProtection(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
@@ -123,7 +125,7 @@ public final class SoulFirePurificationHandler {
             Map<Item, SoulFirePurificationRecipe> byItem = recipeIndex(level.getRecipeManager());
             for (Entity entity : level.getEntities().getAll()) {
                 if (entity instanceof ItemEntity itemEntity) {
-                    applyFireImmunity(itemEntity, gameTime);
+                    expireImmunity(itemEntity, gameTime);
                     updateFireProtection(level, itemEntity, byItem, gameTime);
                 }
             }
@@ -147,7 +149,7 @@ public final class SoulFirePurificationHandler {
                                              Map<Item, SoulFirePurificationRecipe> byItem, long gameTime) {
         ItemStack stack = entity.getItem();
         SoulFirePurificationRecipe recipe = stack.isEmpty() ? null : byItem.get(stack.getItem());
-        boolean marked = isImmune(stack, gameTime);
+        boolean marked = isImmune(entity, gameTime);
         if (recipe == null && !marked) {
             if (entity.isInvulnerable()) {
                 setProtected(entity, false);
@@ -190,47 +192,42 @@ public final class SoulFirePurificationHandler {
         }
     }
 
-    /**
-     * Applies the immunity as soon as an anointed stack rejoins a level, e.g. right after a player
-     * dropped it again.
-     */
-    @SubscribeEvent
-    public static void onEntityJoinLevel(EntityJoinLevelEvent event) {
-        if (!(event.getLevel() instanceof ServerLevel serverLevel)) {
-            return;
-        }
-        if (event.getEntity() instanceof ItemEntity itemEntity) {
-            applyFireImmunity(itemEntity, serverLevel.getGameTime());
-        }
-    }
-
-    private static void applyFireImmunity(ItemEntity entity, long gameTime) {
-        ItemStack stack = entity.getItem();
-        CompoundTag tag = stack.getTag();
-        if (tag == null || !tag.contains(TAG_FIRE_IMMUNE_UNTIL)) {
-            return;
-        }
-        if (tag.getLong(TAG_FIRE_IMMUNE_UNTIL) >= gameTime) {
-            if (entity.getRemainingFireTicks() > 0) {
-                entity.clearFire();
-            }
-        } else {
-            tag.remove(TAG_PURIFIED);
-            tag.remove(TAG_FIRE_IMMUNE_UNTIL);
-        }
-    }
-
     /** Marks a freshly spawned drop: immune to fire for {@link #IMMUNITY_TICKS} and never re-rolled. */
     public static void markPurified(ItemEntity entity) {
         markPurified(entity, entity.level().getGameTime());
     }
 
-    /** Marks a freshly spawned drop using an explicit server game time. */
+    /**
+     * Marks a freshly spawned drop using an explicit server game time. The markers live on the entity,
+     * so picking the drop up ends them and leaves the player with a plain, stackable item.
+     */
     public static void markPurified(ItemEntity entity, long gameTime) {
-        CompoundTag tag = entity.getItem().getOrCreateTag();
-        tag.putBoolean(TAG_PURIFIED, true);
-        tag.putLong(TAG_FIRE_IMMUNE_UNTIL, gameTime + IMMUNITY_TICKS);
-        entity.clearFire();
+        CompoundTag data = entity.getPersistentData();
+        data.putBoolean(TAG_PURIFIED, true);
+        data.putLong(TAG_FIRE_IMMUNE_UNTIL, gameTime + IMMUNITY_TICKS);
+        // Immune from its very first tick: the drop spawns inside the soul fire that just consumed the
+        // input, and the sweep only runs at the end of the server tick.
+        setProtected(entity, true);
+    }
+
+    /** True while the entity still sits inside its fire immunity window. */
+    public static boolean isImmune(ItemEntity entity, long gameTime) {
+        long until = entity.getPersistentData().getLong(TAG_FIRE_IMMUNE_UNTIL);
+        return until > 0L && until >= gameTime;
+    }
+
+    /** Drops the immunity marker of an entity whose window has passed. */
+    private static void expireImmunity(ItemEntity entity, long gameTime) {
+        CompoundTag data = entity.getPersistentData();
+        long until = data.getLong(TAG_FIRE_IMMUNE_UNTIL);
+        if (until > 0L && until < gameTime) {
+            data.remove(TAG_FIRE_IMMUNE_UNTIL);
+        }
+    }
+
+    /** True when this item entity came out of purification and must not be rolled again. */
+    private static boolean isPurifiedDropped(ItemEntity entity) {
+        return entity.getPersistentData().getBoolean(TAG_PURIFIED);
     }
 
     // ---------------------------------------------------------------- purification
@@ -267,7 +264,7 @@ public final class SoulFirePurificationHandler {
             if (stack.isEmpty() || byItem.get(stack.getItem()) == null) {
                 continue;
             }
-            if (stack.hasTag() && stack.getTag() != null && stack.getTag().getBoolean(TAG_PURIFIED)) {
+            if (isPurifiedDropped(entity)) {
                 continue;
             }
             processEntity(level, entity, byItem);
@@ -420,13 +417,6 @@ public final class SoulFirePurificationHandler {
             double strength = (1.0D - distance / maxRadius) * 0.5D;
             entity.setDeltaMovement(entity.getDeltaMovement().add(dx * strength, 0.3D, dz * strength));
         }
-    }
-
-    /** True while the given stack still sits inside its fire immunity window. */
-    public static boolean isImmune(ItemStack stack, long gameTime) {
-        CompoundTag tag = stack.getTag();
-        return tag != null && tag.contains(TAG_FIRE_IMMUNE_UNTIL)
-                && tag.getLong(TAG_FIRE_IMMUNE_UNTIL) >= gameTime;
     }
 
     /** Convenience for callers that already work in world coordinates. */
