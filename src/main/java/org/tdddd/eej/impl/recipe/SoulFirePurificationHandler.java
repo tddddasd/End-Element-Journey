@@ -30,19 +30,29 @@ import org.tdddd.eej.impl.eej;
 import org.tdddd.eej.impl.registry.EejRecipes;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * Soul fire purification mechanic (灵魂火净化).
  *
  * <p>Every {@value #PROCESS_INTERVAL_TICKS} ticks each server level is scanned for item entities
  * standing inside {@code minecraft:soul_fire}. Every <em>single item</em> of such a stack rolls its
- * own recipe: a successful roll spawns the produced stacks, a failed roll consumes the item
- * (burned). Items produced by purification carry the {@link #TAG_PURIFIED} flag and are immune to
- * fire and lava for {@link #IMMUNITY_TICKS} ticks; the deadline lives inside the {@link ItemStack}
- * NBT so the timer survives picking the stack up and dropping it again.
+ * own recipe: a successful roll spawns the produced stacks and consumes that item, while a failed
+ * roll no longer destroys it - the item simply stays in the fire and is rolled again on the next
+ * scan. Nothing is ever burned away by the mechanic, so a stack only shrinks by the items that
+ * actually produced something.
+ *
+ * <p>Vanilla fire destroys item entities: {@code BaseFireBlock.entityInside} hurts the entity every
+ * tick (2 damage in soul fire against an item's 5 health), so an unprotected item dropped into soul
+ * fire is gone within three ticks - before a roll or a detonation could ever happen. Every item the
+ * mechanic still needs is therefore kept invulnerable while it sits in fire (see
+ * {@link #updateFireProtection}): explosive recipes waiting for their detonation, purification
+ * inputs waiting for a successful roll, and freshly purified drops during their
+ * {@link #IMMUNITY_TICKS}-tick immunity window.
  *
  * <p>Items whose recipe carries an {@code explode} block are never rolled: they detonate as soon as
  * they touch {@code minecraft:fire} or {@code minecraft:soul_fire}. Soul fire additionally blinds
@@ -60,16 +70,48 @@ public final class SoulFirePurificationHandler {
     public static final String TAG_FIRE_IMMUNE_UNTIL = "eej_soul_fire_immune_until";
     /** Damage multiplier of the extra custom damage sweep (falls off linearly with distance). */
     private static final double EXPLOSION_DAMAGE_SCALE = 14.0D;
+    /** Persistent-data key marking an item entity whose invulnerability was set by this handler. */
+    private static final String TAG_PROTECTED = "eej_soul_fire_protected";
+
+    /**
+     * Lookup table from input item to recipe, cached per {@link RecipeManager} instance. A datapack
+     * reload builds a fresh manager, which invalidates the entry automatically.
+     */
+    private static final Map<RecipeManager, Map<Item, SoulFirePurificationRecipe>> RECIPE_INDEX =
+            Collections.synchronizedMap(new WeakHashMap<>());
 
     private SoulFirePurificationHandler() {
+    }
+
+    private static Map<Item, SoulFirePurificationRecipe> recipeIndex(RecipeManager manager) {
+        return RECIPE_INDEX.computeIfAbsent(manager, SoulFirePurificationHandler::buildRecipeIndex);
+    }
+
+    private static Map<Item, SoulFirePurificationRecipe> buildRecipeIndex(RecipeManager manager) {
+        List<SoulFirePurificationRecipe> recipes =
+                manager.getAllRecipesFor(EejRecipes.SOUL_FIRE_PURIFICATION_TYPE.get());
+        Map<Item, SoulFirePurificationRecipe> byItem = new HashMap<>();
+        for (SoulFirePurificationRecipe recipe : recipes) {
+            ResourceLocation itemId = recipe.ingredientItemId();
+            if (itemId == null) {
+                continue;
+            }
+            Item item = ForgeRegistries.ITEMS.getValue(itemId);
+            if (item != null) {
+                byItem.putIfAbsent(item, recipe);
+            }
+        }
+        return Map.copyOf(byItem);
     }
 
     // ---------------------------------------------------------------- fire immunity
 
     /**
-     * Applies the fire immunity of purified stacks: the remaining fire ticks are pinned to zero, so
-     * neither {@code minecraft:on_fire} damage nor {@code Entity#lavaHurt()} can destroy the stack.
-     * The marker is dropped once the deadline has passed.
+     * Per-tick item entity sweep that keeps purified stacks immune: the remaining fire ticks of a
+     * marked stack are pinned to zero, so neither {@code minecraft:on_fire} damage nor
+     * {@code Entity#lavaHurt()} can destroy it, and the marker is dropped once the deadline has
+     * passed. The same pass runs {@link #updateFireProtection}, which keeps inputs and explosives
+     * alive against the fire block's per-tick damage.
      */
     @SubscribeEvent
     public static void onServerTickFireImmunity(TickEvent.ServerTickEvent event) {
@@ -78,11 +120,73 @@ public final class SoulFirePurificationHandler {
         }
         for (ServerLevel level : event.getServer().getAllLevels()) {
             long gameTime = level.getGameTime();
+            Map<Item, SoulFirePurificationRecipe> byItem = recipeIndex(level.getRecipeManager());
             for (Entity entity : level.getEntities().getAll()) {
                 if (entity instanceof ItemEntity itemEntity) {
                     applyFireImmunity(itemEntity, gameTime);
+                    updateFireProtection(level, itemEntity, byItem, gameTime);
                 }
             }
+        }
+    }
+
+    /**
+     * Keeps an item entity alive while the mechanic still needs it and gives it back to vanilla
+     * otherwise.
+     *
+     * <p>Vanilla fire hurts an item entity every tick it overlaps the fire block (2 damage per tick
+     * in soul fire against 5 health), which would destroy the input before it could be rolled or
+     * detonated. The entity is made invulnerable for as long as it is inside fire <em>and</em> is one
+     * of ours; the flag lives in the entity's persistent data, so only an invulnerability set here is
+     * ever cleared again.</p>
+     *
+     * <p>Called for every item entity every tick, so the common case (an item with no recipe and no
+     * immunity marker) must not touch the level: it only picks up a flag left behind earlier.</p>
+     */
+    private static void updateFireProtection(Level level, ItemEntity entity,
+                                             Map<Item, SoulFirePurificationRecipe> byItem, long gameTime) {
+        ItemStack stack = entity.getItem();
+        SoulFirePurificationRecipe recipe = stack.isEmpty() ? null : byItem.get(stack.getItem());
+        boolean marked = isImmune(stack, gameTime);
+        if (recipe == null && !marked) {
+            if (entity.isInvulnerable()) {
+                setProtected(entity, false);
+            }
+            return;
+        }
+
+        boolean inSoulFire = isInSoulFire(level, entity);
+        boolean inFire = inSoulFire || isInFire(level, entity);
+        boolean protect = false;
+        if (inFire && recipe != null) {
+            if (recipe.isExplosive()) {
+                // Must survive long enough to reach its own detonation.
+                protect = true;
+            } else if (inSoulFire) {
+                // Waits in the soul fire until a roll produces something.
+                protect = true;
+            }
+        }
+        if (!protect && inFire && marked) {
+            // A freshly purified drop during its immunity window.
+            protect = true;
+        }
+        setProtected(entity, protect);
+    }
+
+    /** Applies (or clears) this handler's own invulnerability flag on the entity. */
+    private static void setProtected(ItemEntity entity, boolean protect) {
+        if (protect) {
+            if (!entity.isInvulnerable()) {
+                entity.setInvulnerable(true);
+            }
+            if (entity.getRemainingFireTicks() > 0) {
+                entity.clearFire();
+            }
+            entity.getPersistentData().putBoolean(TAG_PROTECTED, true);
+        } else if (entity.getPersistentData().getBoolean(TAG_PROTECTED)) {
+            entity.setInvulnerable(false);
+            entity.getPersistentData().remove(TAG_PROTECTED);
         }
     }
 
@@ -146,23 +250,7 @@ public final class SoulFirePurificationHandler {
     }
 
     private static void processLevel(ServerLevel level) {
-        RecipeManager recipeManager = level.getRecipeManager();
-        List<SoulFirePurificationRecipe> recipes =
-                recipeManager.getAllRecipesFor(EejRecipes.SOUL_FIRE_PURIFICATION_TYPE.get());
-        if (recipes.isEmpty()) {
-            return;
-        }
-        Map<Item, SoulFirePurificationRecipe> byItem = new HashMap<>();
-        for (SoulFirePurificationRecipe recipe : recipes) {
-            ResourceLocation itemId = recipe.ingredientItemId();
-            if (itemId == null) {
-                continue;
-            }
-            Item item = ForgeRegistries.ITEMS.getValue(itemId);
-            if (item != null) {
-                byItem.putIfAbsent(item, recipe);
-            }
-        }
+        Map<Item, SoulFirePurificationRecipe> byItem = recipeIndex(level.getRecipeManager());
         if (byItem.isEmpty()) {
             return;
         }
@@ -217,7 +305,9 @@ public final class SoulFirePurificationHandler {
         }
 
         RandomSource random = level.getRandom();
-        // Every single item of the stack rolls independently.
+        // Every single item of the stack rolls independently. A failed roll no longer burns the item:
+        // it stays in the soul fire and is rolled again on the next scan, so only the items that
+        // actually produced something are consumed.
         int rolls = entity.getItem().getCount();
         for (int i = 0; i < rolls; i++) {
             if (entity.getItem().isEmpty()) {
@@ -226,8 +316,9 @@ public final class SoulFirePurificationHandler {
             double x = entity.getX() + (random.nextDouble() - 0.5D) * 0.4D;
             double y = entity.getY() + 0.1D;
             double z = entity.getZ() + (random.nextDouble() - 0.5D) * 0.4D;
-            recipe.rollAndSpawn(level, x, y, z, random);
-            consumeOne(entity);
+            if (recipe.rollAndSpawn(level, x, y, z, random)) {
+                consumeOne(entity);
+            }
         }
     }
 
