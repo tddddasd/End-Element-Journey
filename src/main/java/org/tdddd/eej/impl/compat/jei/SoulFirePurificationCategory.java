@@ -1,0 +1,169 @@
+package org.tdddd.eej.impl.compat.jei;
+
+import java.util.List;
+import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
+import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
+import mezz.jei.api.gui.builder.ITooltipBuilder;
+import mezz.jei.api.gui.drawable.IDrawable;
+import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
+import mezz.jei.api.helpers.IGuiHelper;
+import mezz.jei.api.recipe.IFocusGroup;
+import mezz.jei.api.recipe.RecipeIngredientRole;
+import mezz.jei.api.recipe.category.IRecipeCategory;
+import mezz.jei.api.recipe.types.IRecipeType;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import org.tdddd.eej.impl.eej;
+
+/**
+ * JEI category for {@code eej:soul_fire_purification}.
+ *
+ * <p>The layout mirrors a machine recipe instead of a text page: the input stack, an arrow with the soul fire
+ * block floating right above it, and the purified result, with the chance drawn in orange under the result
+ * slot. One result slot cycles through every candidate of its roll, so "30 % chance for one random original
+ * block" stays a single compact slot.
+ *
+ * <p>The category is populated from the recipes the server synced, so it lists the content mods' (or any data
+ * pack's) entries automatically.
+ */
+public class SoulFirePurificationCategory implements IRecipeCategory<SoulFirePurificationJeiRecipe> {
+    public static final IRecipeType<SoulFirePurificationJeiRecipe> TYPE =
+            IRecipeType.create(eej.MODID, "soul_fire_purification", SoulFirePurificationJeiRecipe.class);
+
+    /** Orange chance labels: the only text this category draws. */
+    private static final int CHANCE_COLOR = 0xFFFF8C00;
+    private static final int SLOT_SIZE = 18;
+    private static final int SLOT_STEP = 20;
+    private static final int COLUMNS = 4;
+    private static final int ROW_Y = 20;
+    private static final int INPUT_X = 5;
+    private static final int ICON_SIZE = 16;
+    private static final int GAP = 6;
+
+    private static final String EXPLODE_KEY = "jei.eej.soul_fire_purification.explode";
+
+    /** Frame 0 of the animated vanilla soul fire texture, the block the item has to be thrown into. */
+    private static final Identifier SOUL_FIRE_TEXTURE =
+            Identifier.fromNamespaceAndPath("minecraft", "textures/block/soul_fire_0.png");
+    /** The file is an animation strip of 32 16x16 frames, so the frame region needs its real height. */
+    private static final int SOUL_FIRE_TEXTURE_HEIGHT = 512;
+
+    private final IDrawable icon;
+    private final IDrawable arrow;
+    private final IDrawable soulFire;
+
+    private final int arrowX;
+    private final int arrowY;
+    private final int soulFireX;
+    private final int soulFireY;
+    private final int outputX;
+    private final int width;
+    private final int height;
+
+    public SoulFirePurificationCategory(IGuiHelper guiHelper) {
+        this.icon = guiHelper.createDrawableItemStack(new ItemStack(Items.SOUL_CAMPFIRE));
+        this.arrow = guiHelper.getRecipeArrow();
+        this.soulFire = guiHelper.drawableBuilder(SOUL_FIRE_TEXTURE, 0, 0, ICON_SIZE, ICON_SIZE)
+                .setTextureSize(ICON_SIZE, SOUL_FIRE_TEXTURE_HEIGHT)
+                .build();
+
+        this.arrowX = INPUT_X + SLOT_SIZE + GAP;
+        this.arrowY = ROW_Y + Math.max(0, (SLOT_SIZE - arrow.getHeight()) / 2);
+        this.soulFireX = arrowX + Math.max(0, (arrow.getWidth() - ICON_SIZE) / 2);
+        this.soulFireY = Math.max(1, arrowY - 3 - ICON_SIZE);
+        this.outputX = arrowX + arrow.getWidth() + GAP + 1;
+        this.width = outputX + COLUMNS * SLOT_STEP - (SLOT_STEP - SLOT_SIZE) + 4;
+        this.height = ROW_Y + SLOT_SIZE + 12;
+    }
+
+    @Override
+    public IRecipeType<SoulFirePurificationJeiRecipe> getRecipeType() {
+        return TYPE;
+    }
+
+    @Override
+    public Component getTitle() {
+        return Component.translatable("category.eej.soul_fire_purification");
+    }
+
+    @Override
+    public int getWidth() {
+        return width;
+    }
+
+    @Override
+    public int getHeight() {
+        return height;
+    }
+
+    @Override
+    public IDrawable getIcon() {
+        return icon;
+    }
+
+    /** Left edge of the result slot at the given index. */
+    private int slotX(int index) {
+        return outputX + index * SLOT_STEP;
+    }
+
+    @Override
+    public void setRecipe(IRecipeLayoutBuilder builder, SoulFirePurificationJeiRecipe recipe, IFocusGroup focuses) {
+        builder.addSlot(RecipeIngredientRole.INPUT, INPUT_X, ROW_Y).addItemStacks(recipe.getInputs());
+
+        List<SoulFirePurificationJeiRecipe.OutputEntry> entries = recipe.getEntries();
+        if (entries.isEmpty()) {
+            // Explosive rule: no roll at all, so the outcome is shown as a symbol with a hover note.
+            builder.addSlot(RecipeIngredientRole.RENDER_ONLY, outputX, ROW_Y)
+                    .add(new ItemStack(Items.TNT))
+                    .addRichTooltipCallback((view, tooltip) -> tooltip.add(Component.translatable(EXPLODE_KEY)));
+            return;
+        }
+
+        for (int index = 0; index < entries.size() && index < COLUMNS; index++) {
+            SoulFirePurificationJeiRecipe.OutputEntry entry = entries.get(index);
+            IRecipeSlotBuilder slot = builder.addSlot(RecipeIngredientRole.OUTPUT, slotX(index), ROW_Y)
+                    .addItemStacks(entry.displayStacks());
+            if (entry.hasCountRange()) {
+                slot.addRichTooltipCallback((view, tooltip) -> tooltip.add(
+                        Component.literal("x" + entry.minCount() + "-" + entry.maxCount())));
+            }
+        }
+    }
+
+    @Override
+    public void draw(SoulFirePurificationJeiRecipe recipe, IRecipeSlotsView recipeSlotsView,
+                     GuiGraphicsExtractor guiGraphics, double mouseX, double mouseY) {
+        arrow.draw(guiGraphics, arrowX, arrowY);
+        soulFire.draw(guiGraphics, soulFireX, soulFireY);
+
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft == null || minecraft.font == null) {
+            return;
+        }
+        Font font = minecraft.font;
+        List<SoulFirePurificationJeiRecipe.OutputEntry> entries = recipe.getEntries();
+        for (int index = 0; index < entries.size() && index < COLUMNS; index++) {
+            String percent = percent(entries.get(index).chance());
+            int x = slotX(index) + Math.max(0, (ICON_SIZE - font.width(percent)) / 2);
+            guiGraphics.text(font, percent, x, ROW_Y + SLOT_SIZE + 1, CHANCE_COLOR, false);
+        }
+    }
+
+    @Override
+    public void getTooltip(ITooltipBuilder tooltip, SoulFirePurificationJeiRecipe recipe,
+                           IRecipeSlotsView recipeSlotsView, double mouseX, double mouseY) {
+        if (mouseX >= soulFireX && mouseX < soulFireX + ICON_SIZE
+                && mouseY >= soulFireY && mouseY < soulFireY + ICON_SIZE) {
+            tooltip.add(Component.translatable("block.minecraft.soul_fire"));
+        }
+    }
+
+    private static String percent(float chance) {
+        return Math.round(chance * 100.0F) + "%";
+    }
+}

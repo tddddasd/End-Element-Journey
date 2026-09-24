@@ -58,6 +58,10 @@ public class EejLangCN extends LanguageProvider {
         add("jei.eej.altar_crafting.hint", "把材料放在任意祭台上，顺序无关");
 
         
+        add("category.eej.soul_fire_purification", "灵魂火净化");
+        add("jei.eej.soul_fire_purification.explode", "接触火焰时立即爆炸（灵魂火中额外施加失明 I）");
+
+        
         add("commands.eej.island.info", "区块 %s,%s：底层基岩 %s，3×3 非真空岛底层合计 %s，%s");
         add("commands.eej.island.set.vacuum", "已将区块 %s,%s 设为真空岛区块");
         add("commands.eej.island.set.nonvacuum", "已将区块 %s,%s 设为非真空岛区块");

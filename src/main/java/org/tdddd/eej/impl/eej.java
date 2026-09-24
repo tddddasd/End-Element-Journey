@@ -28,6 +28,8 @@ import org.tdddd.eej.impl.registry.EejBlocks;
 import org.tdddd.eej.impl.registry.EejCreativeTabs;
 import org.tdddd.eej.impl.registry.EejDataComponents;
 import org.tdddd.eej.impl.registry.EejItems;
+import org.tdddd.eej.impl.registry.EejRecipeTypes;
+import org.tdddd.eej.impl.soulfire.SoulFirePurificationEvents;
 
 
 @Mod(eej.MODID)
@@ -51,6 +53,7 @@ public class eej {
         EejBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         EejItems.ITEMS.register(modEventBus);
         EejCreativeTabs.CREATIVE_TABS.register(modEventBus);
+        EejRecipeTypes.register(modEventBus);
 
         
         modEventBus.addListener(PackedMudPedestalBlockEntity::registerCapabilities);
@@ -64,6 +67,9 @@ public class eej {
 
         
         NeoForge.EVENT_BUS.register(new IslandEvents());
+
+        // Soul fire purification: item entity / player tick hooks for the mechanic and the 30 s fire immunity.
+        NeoForge.EVENT_BUS.register(SoulFirePurificationEvents.class);
 
         
         

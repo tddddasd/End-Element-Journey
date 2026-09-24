@@ -11,9 +11,13 @@ import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.item.crafting.RecipeMap;
+import org.tdddd.eej.impl.client.EejClientRecipeCache;
 import org.tdddd.eej.impl.eej;
+import org.tdddd.eej.impl.soulfire.SoulFirePurificationRecipe;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,21 +33,42 @@ public class EejJeiPlugin implements IModPlugin {
     @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
         registration.addRecipeCategories(
-                new AltarCraftingCategory(registration.getJeiHelpers().getGuiHelper())
+                new AltarCraftingCategory(registration.getJeiHelpers().getGuiHelper()),
+                new SoulFirePurificationCategory(registration.getJeiHelpers().getGuiHelper())
         );
     }
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
-        if (Minecraft.getInstance().level == null) return;
-        if (!(Minecraft.getInstance().level.recipeAccess() instanceof RecipeManager manager)) {
-            
-            
-            return;
-        }
+        Collection<RecipeHolder<?>> recipes = availableRecipes();
+        registerAltarCrafting(registration, recipes);
+        registerSoulFirePurification(registration, recipes);
+    }
 
+    /**
+     * The loaded recipes, taken from the content NeoForge synced to this client.
+     *
+     * <p>26.1.2 does not send the recipe list in {@code ClientboundUpdateRecipesPacket} any more, so the client
+     * level's {@code RecipeAccess} is a {@code ClientRecipeContainer} rather than a {@code RecipeManager}; the
+     * real content arrives through {@code RecipeContentPayload} and {@link EejClientRecipeCache}. The old
+     * recipe-manager lookup is kept as a fallback for environments where no sync has happened.
+     */
+    private static Collection<RecipeHolder<?>> availableRecipes() {
+        RecipeMap synced = EejClientRecipeCache.synced();
+        if (!synced.values().isEmpty()) {
+            return synced.values();
+        }
+        if (Minecraft.getInstance().level != null
+                && Minecraft.getInstance().level.recipeAccess() instanceof RecipeManager manager) {
+            return manager.getRecipes();
+        }
+        return List.of();
+    }
+
+    private static void registerAltarCrafting(IRecipeRegistration registration,
+                                              Collection<RecipeHolder<?>> recipes) {
         List<AltarCraftingRecipe> wrappers = new ArrayList<>();
-        for (RecipeHolder<?> holder : manager.getRecipes()) {
+        for (RecipeHolder<?> holder : recipes) {
             if (!(holder.value() instanceof CraftingRecipe recipe)) continue;
             if (recipe.isSpecial()) continue;
 
@@ -64,6 +89,19 @@ public class EejJeiPlugin implements IModPlugin {
         }
 
         registration.addRecipes(AltarCraftingCategory.TYPE, wrappers);
+    }
+
+    private static void registerSoulFirePurification(IRecipeRegistration registration,
+                                                     Collection<RecipeHolder<?>> recipes) {
+        List<SoulFirePurificationJeiRecipe> wrappers = new ArrayList<>();
+        for (RecipeHolder<?> holder : recipes) {
+            if (!(holder.value() instanceof SoulFirePurificationRecipe recipe)) continue;
+            SoulFirePurificationJeiRecipe wrapper = SoulFirePurificationJeiRecipe.of(recipe);
+            if (wrapper != null)
+                wrappers.add(wrapper);
+        }
+
+        registration.addRecipes(SoulFirePurificationCategory.TYPE, wrappers);
     }
 
     private static net.minecraft.world.item.crafting.CraftingInput emptyCraftingInput() {
