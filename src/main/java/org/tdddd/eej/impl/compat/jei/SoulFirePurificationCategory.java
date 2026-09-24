@@ -45,8 +45,6 @@ public class SoulFirePurificationCategory implements IRecipeCategory<SoulFirePur
     private static final int ICON_SIZE = 16;
     private static final int GAP = 6;
 
-    private static final String EXPLODE_KEY = "jei.eej.soul_fire_purification.explode";
-
     /** Frame 0 of the animated vanilla soul fire texture, the block the item has to be thrown into. */
     private static final Identifier SOUL_FIRE_TEXTURE =
             Identifier.fromNamespaceAndPath("minecraft", "textures/block/soul_fire_0.png");
@@ -115,15 +113,9 @@ public class SoulFirePurificationCategory implements IRecipeCategory<SoulFirePur
     public void setRecipe(IRecipeLayoutBuilder builder, SoulFirePurificationJeiRecipe recipe, IFocusGroup focuses) {
         builder.addSlot(RecipeIngredientRole.INPUT, INPUT_X, ROW_Y).addItemStacks(recipe.getInputs());
 
+        // Only recipes that yield something reach JEI (see EejJeiPlugin): one slot per output roll, each
+        // cycling through every candidate of that roll.
         List<SoulFirePurificationJeiRecipe.OutputEntry> entries = recipe.getEntries();
-        if (entries.isEmpty()) {
-            // Explosive rule: no roll at all, so the outcome is shown as a symbol with a hover note.
-            builder.addSlot(RecipeIngredientRole.RENDER_ONLY, outputX, ROW_Y)
-                    .add(new ItemStack(Items.TNT))
-                    .addRichTooltipCallback((view, tooltip) -> tooltip.add(Component.translatable(EXPLODE_KEY)));
-            return;
-        }
-
         for (int index = 0; index < entries.size() && index < COLUMNS; index++) {
             SoulFirePurificationJeiRecipe.OutputEntry entry = entries.get(index);
             IRecipeSlotBuilder slot = builder.addSlot(RecipeIngredientRole.OUTPUT, slotX(index), ROW_Y)

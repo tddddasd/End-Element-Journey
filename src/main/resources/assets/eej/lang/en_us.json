@@ -28,7 +28,6 @@
   "altar.eej.filter_rejected": "This item is rejected by the pedestal filter (%s)",
   "altar.eej.filter_cleared": "Cleared this pedestal's filter",
   "jei.eej.altar_crafting.hint": "Place the materials on any pedestals - order does not matter",
-  "jei.eej.soul_fire_purification.explode": "Explodes on contact with fire (Blindness I in soul fire)",
   "commands.eej.island.info": "Chunk %s,%s: bottom-layer bedrock %s, 3x3 non-vacuum bottom total %s, %s",
   "commands.eej.island.set.vacuum": "Chunk %s,%s is now a vacuum-island chunk",
   "commands.eej.island.set.nonvacuum": "Chunk %s,%s is now a non-vacuum-island chunk",

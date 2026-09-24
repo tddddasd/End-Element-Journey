@@ -58,7 +58,6 @@ public class EejLangEN extends LanguageProvider {
 
         // Soul fire purification
         add("category.eej.soul_fire_purification", "Soul Fire Purification");
-        add("jei.eej.soul_fire_purification.explode", "Explodes on contact with fire (Blindness I in soul fire)");
 
         // Vacuum island / void chunk
         add("commands.eej.island.info", "Chunk %s,%s: bottom-layer bedrock %s, 3x3 non-vacuum bottom total %s, %s");

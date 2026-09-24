@@ -97,8 +97,10 @@ public class EejJeiPlugin implements IModPlugin {
         for (RecipeHolder<?> holder : recipes) {
             if (!(holder.value() instanceof SoulFirePurificationRecipe recipe)) continue;
             SoulFirePurificationJeiRecipe wrapper = SoulFirePurificationJeiRecipe.of(recipe);
-            if (wrapper != null)
-                wrappers.add(wrapper);
+            // Recipes that can never produce an item (the explosive entries) are left out of the JEI list
+            // entirely: a recipe browser should only offer transformations that yield something.
+            if (wrapper == null || wrapper.getEntries().isEmpty()) continue;
+            wrappers.add(wrapper);
         }
 
         registration.addRecipes(SoulFirePurificationCategory.TYPE, wrappers);

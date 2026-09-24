@@ -35,6 +35,5 @@
   "item.small_item_frame.max_reached": "Cannot add (limit reached or duplicate)",
   "item.small_item_frame.no_offhand": "No item in offhand",
   "itemGroup.eej.main_tab": "End:Element Journey",
-  "jei.eej.altar_crafting.hint": "Place the materials on any pedestals - order does not matter",
-  "jei.eej.soul_fire_purification.explode": "Explodes on contact with fire (Blindness I in soul fire)"
+  "jei.eej.altar_crafting.hint": "Place the materials on any pedestals - order does not matter"
 }

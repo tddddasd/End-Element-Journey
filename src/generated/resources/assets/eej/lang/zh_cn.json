@@ -35,6 +35,5 @@
   "item.small_item_frame.max_reached": "无法添加（已达上限或已存在）",
   "item.small_item_frame.no_offhand": "副手无物品",
   "itemGroup.eej.main_tab": "终末-元素奇旅",
-  "jei.eej.altar_crafting.hint": "把材料放在任意祭台上，顺序无关",
-  "jei.eej.soul_fire_purification.explode": "接触火焰时立即爆炸（灵魂火中额外施加失明 I）"
+  "jei.eej.altar_crafting.hint": "把材料放在任意祭台上，顺序无关"
 }
