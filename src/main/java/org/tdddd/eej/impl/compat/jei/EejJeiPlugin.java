@@ -2,8 +2,10 @@ package org.tdddd.eej.impl.compat.jei;
 
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
+import mezz.jei.api.recipe.IRecipeManager;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
@@ -23,8 +25,26 @@ import java.util.List;
 import java.util.Map;
 
 
+/**
+ * JEI plugin of eej: the altar crafting and soul fire purification categories.
+ *
+ * <h2>Why recipes are published twice</h2>
+ * 26.1.2 sends the recipe list in {@code RecipeContentPayload}, which NeoForge re-exposes as
+ * {@code RecipesReceivedEvent}. JEI waits for exactly that event before it starts and calls
+ * {@link #registerRecipes}, and the mod-bus delivers the event to every listener - <b>including
+ * {@link EejClientRecipeCache}, whose cache this plugin reads</b> - in an order that is not specified. Whenever
+ * JEI's own listener runs first, {@link EejClientRecipeCache#synced()} is still empty here and both categories
+ * would silently stay empty. The plugin therefore remembers whether it handed over a non-empty list and
+ * republishes through {@link IJeiRuntime#getRecipeManager()} once the recipe sync has arrived (see
+ * {@link #onRecipesSynced()}), which covers either order and JEI restarts alike.
+ */
 @JeiPlugin
 public class EejJeiPlugin implements IModPlugin {
+    /** The runtime, available between {@code onRuntimeAvailable} and {@code onRuntimeUnavailable}. */
+    private static IJeiRuntime runtime;
+    /** True once this runtime received a non-empty recipe list for our categories. */
+    private static boolean categoriesPublished;
+
     @Override
     public Identifier getPluginUid() {
         return Identifier.fromNamespaceAndPath(eej.MODID, "jei_plugin");
@@ -40,9 +60,69 @@ public class EejJeiPlugin implements IModPlugin {
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
+        categoriesPublished = false;
         Collection<RecipeHolder<?>> recipes = availableRecipes();
-        registerAltarCrafting(registration, recipes);
-        registerSoulFirePurification(registration, recipes);
+        List<AltarCraftingRecipe> altar = buildAltarCrafting(recipes);
+        List<SoulFirePurificationJeiRecipe> soulFire = buildSoulFirePurification(recipes);
+
+        if (!altar.isEmpty()) {
+            registration.addRecipes(AltarCraftingCategory.TYPE, altar);
+        }
+        if (!soulFire.isEmpty()) {
+            registration.addRecipes(SoulFirePurificationCategory.TYPE, soulFire);
+        }
+        categoriesPublished = !altar.isEmpty() || !soulFire.isEmpty();
+        eej.LOGGER.info("[eej-jei] registered {} altar and {} soul fire recipes ({} synced recipes available)",
+                altar.size(), soulFire.size(), recipes.size());
+    }
+
+    @Override
+    public void onRuntimeAvailable(IJeiRuntime jeiRuntime) {
+        runtime = jeiRuntime;
+        publishPendingRecipes();
+    }
+
+    @Override
+    public void onRuntimeUnavailable() {
+        runtime = null;
+        categoriesPublished = false;
+    }
+
+    /**
+     * Called by {@link EejClientRecipeCache} after every recipe sync.
+     *
+     * <p>The call site is guarded by a JEI presence check there, because this class references JEI API types and
+     * must not be loaded on a client without JEI.</p>
+     */
+    public static void onRecipesSynced() {
+        publishPendingRecipes();
+    }
+
+    /**
+     * Hands the categories to JEI through the runtime when the registration ran before the recipe sync reached
+     * {@link EejClientRecipeCache}. Adding a second time would duplicate every entry (JEI appends), hence the
+     * {@link #categoriesPublished} guard.
+     */
+    private static void publishPendingRecipes() {
+        if (categoriesPublished || runtime == null) {
+            return;
+        }
+        Collection<RecipeHolder<?>> recipes = availableRecipes();
+        List<AltarCraftingRecipe> altar = buildAltarCrafting(recipes);
+        List<SoulFirePurificationJeiRecipe> soulFire = buildSoulFirePurification(recipes);
+        if (altar.isEmpty() && soulFire.isEmpty()) {
+            return;
+        }
+        IRecipeManager manager = runtime.getRecipeManager();
+        if (!altar.isEmpty()) {
+            manager.addRecipes(AltarCraftingCategory.TYPE, altar);
+        }
+        if (!soulFire.isEmpty()) {
+            manager.addRecipes(SoulFirePurificationCategory.TYPE, soulFire);
+        }
+        categoriesPublished = true;
+        eej.LOGGER.info("[eej-jei] published {} altar and {} soul fire recipes after a late recipe sync",
+                altar.size(), soulFire.size());
     }
 
     /**
@@ -65,8 +145,7 @@ public class EejJeiPlugin implements IModPlugin {
         return List.of();
     }
 
-    private static void registerAltarCrafting(IRecipeRegistration registration,
-                                              Collection<RecipeHolder<?>> recipes) {
+    private static List<AltarCraftingRecipe> buildAltarCrafting(Collection<RecipeHolder<?>> recipes) {
         List<AltarCraftingRecipe> wrappers = new ArrayList<>();
         for (RecipeHolder<?> holder : recipes) {
             if (!(holder.value() instanceof CraftingRecipe recipe)) continue;
@@ -87,12 +166,11 @@ public class EejJeiPlugin implements IModPlugin {
             if (!output.isEmpty())
                 wrappers.add(new AltarCraftingRecipe(entries, output));
         }
-
-        registration.addRecipes(AltarCraftingCategory.TYPE, wrappers);
+        return wrappers;
     }
 
-    private static void registerSoulFirePurification(IRecipeRegistration registration,
-                                                     Collection<RecipeHolder<?>> recipes) {
+    private static List<SoulFirePurificationJeiRecipe> buildSoulFirePurification(
+            Collection<RecipeHolder<?>> recipes) {
         List<SoulFirePurificationJeiRecipe> wrappers = new ArrayList<>();
         for (RecipeHolder<?> holder : recipes) {
             if (!(holder.value() instanceof SoulFirePurificationRecipe recipe)) continue;
@@ -102,8 +180,7 @@ public class EejJeiPlugin implements IModPlugin {
             if (wrapper == null || wrapper.getEntries().isEmpty()) continue;
             wrappers.add(wrapper);
         }
-
-        registration.addRecipes(SoulFirePurificationCategory.TYPE, wrappers);
+        return wrappers;
     }
 
     private static net.minecraft.world.item.crafting.CraftingInput emptyCraftingInput() {
