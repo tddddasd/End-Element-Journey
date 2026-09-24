@@ -58,6 +58,15 @@ public final class SoulFireImmunity {
         return until > 0L && level.getGameTime() >= until;
     }
 
+    /**
+     * @return true while the stack carries the marker, whether or not its window has already passed. Used by
+     *     the fire protection sweep, which must keep the drop alive for exactly as long as the marker lives.
+     */
+    public static boolean isMarked(ItemStack stack) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        return data != null && data.copyTag().getLongOr(EXPIRE_KEY, 0L) > 0L;
+    }
+
     /** Removes the marker. Mutates the given stack in place; pass a copy when it belongs to an entity. */
     public static void clear(ItemStack stack) {
         stack.remove(DataComponents.DAMAGE_RESISTANT);

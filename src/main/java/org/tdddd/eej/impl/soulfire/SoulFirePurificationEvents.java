@@ -14,9 +14,26 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
  * <p>Item entities are handled per entity tick, which is O(1) per item entity and avoids scanning levels for
  * item entities near fire. Player inventories are swept every 20 ticks (one pass over the slots) so that the
  * 30 s fire immunity cannot outlive its window while the item sits in a backpack.
+ *
+ * <p>Two hooks per item entity on purpose: {@link #onEntityTickPre} only applies the fire protection, which must
+ * happen <b>before</b> the entity's own tick because {@code BaseFireBlock.entityInside} hurts it (2 damage in
+ * soul fire against 5 health) while it ticks; {@link #onEntityTickPost} then runs the mechanic itself. The
+ * consuming actions (rolling, detonating) deliberately stay in the post hook so a discarded entity never ticks.
  */
 public final class SoulFirePurificationEvents {
     private SoulFirePurificationEvents() {
+    }
+
+    @SubscribeEvent
+    public static void onEntityTickPre(EntityTickEvent.Pre event) {
+        Entity entity = event.getEntity();
+        if (!(entity instanceof ItemEntity itemEntity)) {
+            return;
+        }
+        if (!(entity.level() instanceof ServerLevel level)) {
+            return;
+        }
+        SoulFirePurificationManager.protectItemEntity(level, itemEntity);
     }
 
     @SubscribeEvent

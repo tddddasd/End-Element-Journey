@@ -30,18 +30,38 @@ import net.minecraft.world.phys.AABB;
  * The soul fire purification mechanic.
  *
  * <p>An item entity that overlaps {@code minecraft:soul_fire} is looked up in the loaded
- * {@code eej:soul_fire_purification} recipes; each recipe entry rolls on its own, so a single stack produces
- * exactly one result set for the whole stack (per the specification "each item rolls independently" is
- * implemented per item <em>entity</em>: one roll when the entity touches the fire, then the entity is consumed
- * either way). Every produced stack is marked fire immune for 30 s.
+ * {@code eej:soul_fire_purification} recipes. Every single item of the stack rolls on its own: a successful roll
+ * spawns that item's drops and consumes it, a failed roll leaves the item where it is and it is rolled again on
+ * the shared {@value #PROCESS_INTERVAL_TICKS}-tick cadence until it produces something. Nothing is ever burned
+ * away by the mechanic, so a stack only shrinks by the items that actually yielded something.
  *
  * <p>An item entity that overlaps {@code minecraft:fire} only triggers the recipe's optional {@code explode}
  * block. Soul fire does the same and additionally applies Blindness I inside the explosion radius.
+ *
+ * <h2>Fire protection</h2>
+ * Vanilla fire destroys item entities: {@code BaseFireBlock.entityInside} calls
+ * {@code entity.hurt(damageSources().inFire(), fireDamage)} <b>every tick</b> (soul fire uses 2.0, normal fire
+ * 1.0) and an item entity only has 5 health, so an unprotected item dropped into soul fire is gone in three
+ * ticks - long before a purification roll or a detonation could happen. Every item the mechanic still needs is
+ * therefore made invulnerable while it sits in fire ({@link #updateProtection}):
+ * <ul>
+ *   <li>an explosive recipe (infested coal and the coal ores) waiting for its detonation,</li>
+ *   <li>a purification input waiting in soul fire for a successful roll,</li>
+ *   <li>a freshly purified drop during its 30 s immunity window.</li>
+ * </ul>
+ * The flag is recorded in the entity's persistent data, so the manager only ever clears an invulnerability it
+ * set itself and an item that leaves the fire (or whose window expires) goes back to normal.
  *
  * <p>Recipes are indexed by item and the index is cached per {@link RecipeManager} instance in a
  * {@link WeakHashMap}, so a datapack reload (which builds a fresh recipe manager) invalidates it automatically.
  */
 public final class SoulFirePurificationManager {
+    /** Ticks between two purification rolls, matching the 1.20.1 scan interval. */
+    public static final int PROCESS_INTERVAL_TICKS = 10;
+
+    /** Persistent-data key marking an item entity whose invulnerability was set by this manager. */
+    private static final String PROTECTED_KEY = "eej_soul_fire_protected";
+
     /** Number of soul particles spawned on a successful purification (soul speed look and feel). */
     private static final int SOUL_PARTICLE_COUNT = 12;
     private static final double SOUL_PARTICLE_SPREAD = 0.25D;
@@ -105,6 +125,11 @@ public final class SoulFirePurificationManager {
         // 2. Fire / soul fire processing.
         SoulFirePurificationRecipe recipe = index(level.recipeAccess()).find(stack);
         boolean soulFire = isInside(level, itemEntity, Blocks.SOUL_FIRE);
+        boolean inFire = soulFire || isInside(level, itemEntity, Blocks.FIRE);
+
+        // 3. Keep everything the mechanic still needs alive inside the flames.
+        updateProtection(itemEntity, stack, recipe, soulFire, inFire);
+
         if (recipe == null) {
             // Data driven "soul fire simply consumes this" list (for example infested flesh).
             if (soulFire && stack.typeHolder().is(SoulFireTags.SOUL_FIRE_CONSUMED)) {
@@ -113,7 +138,6 @@ public final class SoulFirePurificationManager {
             return;
         }
 
-        boolean inFire = soulFire || isInside(level, itemEntity, Blocks.FIRE);
         if (!inFire) {
             return;
         }
@@ -124,12 +148,87 @@ public final class SoulFirePurificationManager {
             return;
         }
 
-        // Purification itself only happens in soul fire.
-        if (!soulFire) {
+        // Purification itself only happens in soul fire, on the shared 10-tick cadence.
+        if (!soulFire || level.getGameTime() % PROCESS_INTERVAL_TICKS != 0L) {
             return;
         }
         purify(level, itemEntity, recipe);
-        itemEntity.discard();
+    }
+
+    /**
+     * Fire protection only, called from the pre-tick hook so that it runs before
+     * {@code BaseFireBlock.entityInside} hurts the item during its own tick. See {@link #updateProtection}.
+     */
+    public static void protectItemEntity(ServerLevel level, ItemEntity itemEntity) {
+        if (itemEntity.isRemoved()) {
+            return;
+        }
+        ItemStack stack = itemEntity.getItem();
+        if (stack.isEmpty()) {
+            return;
+        }
+        SoulFirePurificationRecipe recipe = index(level.recipeAccess()).find(stack);
+        if (recipe == null && !SoulFireImmunity.isMarked(stack)) {
+            if (itemEntity.isInvulnerable()) {
+                setProtected(itemEntity, false);
+            }
+            return;
+        }
+        boolean soulFire = isInside(level, itemEntity, Blocks.SOUL_FIRE);
+        boolean inFire = soulFire || isInside(level, itemEntity, Blocks.FIRE);
+        updateProtection(itemEntity, stack, recipe, soulFire, inFire);
+    }
+
+    /**
+     * Keeps an item entity alive while the mechanic still needs it, and gives it back to vanilla otherwise.
+     *
+     * <p>Vanilla fire hurts item entities every tick while they overlap the fire block (2 damage per tick in
+     * soul fire against 5 health), which would destroy the input before it could ever be rolled or detonated.
+     * The entity is made invulnerable for as long as it is inside fire <em>and</em> is one of ours; the flag
+     * lives in the persistent data so only an invulnerability set here is ever removed again.</p>
+     */
+    private static void updateProtection(ItemEntity itemEntity, ItemStack stack,
+                                         SoulFirePurificationRecipe recipe, boolean soulFire, boolean inFire) {
+        boolean marked = SoulFireImmunity.isMarked(stack);
+        if (recipe == null && !marked) {
+            // Cheap path: nothing of ours, so only pick up a flag we left behind earlier.
+            if (itemEntity.isInvulnerable()) {
+                setProtected(itemEntity, false);
+            }
+            return;
+        }
+
+        boolean protect = false;
+        if (inFire && recipe != null) {
+            if (recipe.explosion().isPresent()) {
+                // Must survive long enough to reach its own detonation.
+                protect = true;
+            } else if (soulFire) {
+                // Waits in the soul fire until a roll produces something.
+                protect = true;
+            }
+        }
+        if (!protect && inFire && marked) {
+            // A freshly purified drop during its 30 s immunity window.
+            protect = true;
+        }
+        setProtected(itemEntity, protect);
+    }
+
+    /** Applies (or clears) the manager's own invulnerability flag on the entity. */
+    private static void setProtected(ItemEntity itemEntity, boolean protect) {
+        if (protect) {
+            if (!itemEntity.isInvulnerable()) {
+                itemEntity.setInvulnerable(true);
+            }
+            if (itemEntity.getRemainingFireTicks() > 0) {
+                itemEntity.clearFire();
+            }
+            itemEntity.getPersistentData().putBoolean(PROTECTED_KEY, true);
+        } else if (itemEntity.getPersistentData().getBooleanOr(PROTECTED_KEY, false)) {
+            itemEntity.setInvulnerable(false);
+            itemEntity.getPersistentData().remove(PROTECTED_KEY);
+        }
     }
 
     /** Removes expired fire immunity markers from a player's inventory (called every 20 ticks). */
@@ -146,7 +245,36 @@ public final class SoulFirePurificationManager {
         }
     }
 
+    /**
+     * Rolls the recipe once per item of the stack. An item that produces nothing is left alone: the stack only
+     * shrinks by the items that actually yielded a drop, and anything left is rolled again on the next cadence.
+     */
     private static void purify(ServerLevel level, ItemEntity itemEntity, SoulFirePurificationRecipe recipe) {
+        int pending = itemEntity.getItem().getCount();
+        boolean producedAny = false;
+        for (int index = 0; index < pending; index++) {
+            if (itemEntity.isRemoved() || itemEntity.getItem().isEmpty()) {
+                break;
+            }
+            if (!rollOnce(level, itemEntity, recipe)) {
+                continue;
+            }
+            producedAny = true;
+            ItemStack rest = itemEntity.getItem().copy();
+            rest.shrink(1);
+            if (rest.isEmpty()) {
+                itemEntity.discard();
+            } else {
+                itemEntity.setItem(rest);
+            }
+        }
+        if (producedAny) {
+            playSoulFireFeedback(level, itemEntity);
+        }
+    }
+
+    /** One roll of every result group of the recipe; true when at least one drop was spawned. */
+    private static boolean rollOnce(ServerLevel level, ItemEntity itemEntity, SoulFirePurificationRecipe recipe) {
         boolean produced = false;
         for (SoulFireOutput output : recipe.results()) {
             if (level.getRandom().nextFloat() >= output.chance()) {
@@ -159,9 +287,7 @@ public final class SoulFirePurificationManager {
             spawnPurified(level, itemEntity, drop.createStack(level.getRandom()));
             produced = true;
         }
-        if (produced) {
-            playSoulFireFeedback(level, itemEntity);
-        }
+        return produced;
     }
 
     private static void spawnPurified(ServerLevel level, ItemEntity source, ItemStack stack) {
