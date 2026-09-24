@@ -40,17 +40,16 @@ import java.util.WeakHashMap;
  *
  * <p>Every {@value #PROCESS_INTERVAL_TICKS} ticks each server level is scanned for item entities
  * standing inside {@code minecraft:soul_fire}. Every <em>single item</em> of such a stack rolls its
- * own recipe: a successful roll spawns the produced stacks and consumes that item, while a failed
- * roll no longer destroys it - the item simply stays in the fire and is rolled again on the next
- * scan. Nothing is ever burned away by the mechanic, so a stack only shrinks by the items that
- * actually produced something.
+ * own recipe, and that recipe's chance is the chance that <b>one purification attempt</b> yields
+ * something: a successful roll spawns the produced stacks, a failed roll burns the item away. The
+ * item is consumed either way, so the configured chance is exactly the chance the player gets.
  *
  * <p>Vanilla fire destroys item entities: {@code BaseFireBlock.entityInside} hurts the entity every
  * tick (2 damage in soul fire against an item's 5 health), so an unprotected item dropped into soul
- * fire is gone within three ticks - before a roll or a detonation could ever happen. Every item the
- * mechanic still needs is therefore kept invulnerable while it sits in fire (see
- * {@link #updateFireProtection}): explosive recipes waiting for their detonation, purification
- * inputs waiting for a successful roll, and freshly purified drops during their
+ * fire is gone within three ticks - before the 10-tick scan, and so before the roll that is supposed
+ * to decide its fate. Every item the mechanic still needs is therefore kept invulnerable while it
+ * sits in fire (see {@link #updateFireProtection}): explosive recipes waiting for their detonation,
+ * purification inputs waiting for the scan, and freshly purified drops during their
  * {@link #IMMUNITY_TICKS}-tick immunity window.
  *
  * <p>Items whose recipe carries an {@code explode} block are never rolled: they detonate as soon as
@@ -165,7 +164,7 @@ public final class SoulFirePurificationHandler {
                 // Must survive long enough to reach its own detonation.
                 protect = true;
             } else if (inSoulFire) {
-                // Waits in the soul fire until a roll produces something.
+                // Waits in the soul fire for the scan that rolls it.
                 protect = true;
             }
         }
@@ -302,9 +301,10 @@ public final class SoulFirePurificationHandler {
         }
 
         RandomSource random = level.getRandom();
-        // Every single item of the stack rolls independently. A failed roll no longer burns the item:
-        // it stays in the soul fire and is rolled again on the next scan, so only the items that
-        // actually produced something are consumed.
+        // Every single item of the stack rolls on its own, and the recipe's chance is the chance that ONE
+        // purification attempt yields something: the item is consumed either way, producing its drops on a
+        // success and simply burning away on a failure. The fire cannot take the item first (see
+        // updateFireProtection), so the configured chance is always the chance the player gets.
         int rolls = entity.getItem().getCount();
         for (int i = 0; i < rolls; i++) {
             if (entity.getItem().isEmpty()) {
@@ -313,9 +313,8 @@ public final class SoulFirePurificationHandler {
             double x = entity.getX() + (random.nextDouble() - 0.5D) * 0.4D;
             double y = entity.getY() + 0.1D;
             double z = entity.getZ() + (random.nextDouble() - 0.5D) * 0.4D;
-            if (recipe.rollAndSpawn(level, x, y, z, random)) {
-                consumeOne(entity);
-            }
+            recipe.rollAndSpawn(level, x, y, z, random);
+            consumeOne(entity);
         }
     }
 
