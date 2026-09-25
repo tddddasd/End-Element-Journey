@@ -38,10 +38,15 @@ public class AltarCraftingCategory implements IRecipeCategory<AltarCraftingRecip
     private static final int ROW_HEIGHT = 36;
     private static final int MAX_PER_ROW = 6;
 
-    /** Vertical offset of a pedestal icon: one pixel below the slot it belongs to. */
-    private static final int PEDESTAL_OFFSET_Y = SLOT_SIZE + 1;
-    /** Horizontal offset that centres the 16 px icon inside the 18 px slot. */
-    private static final int PEDESTAL_OFFSET_X = 3;
+    /**
+     * Offset of a pedestal icon relative to the ingredient slot it belongs to.
+     *
+     * <p>JEI draws the 16 px item inside its 18 px slot with a one pixel inset, so the icon uses the same
+     * offset: the item then sits <b>exactly above</b> its pedestal, in the same column, with the icon starting
+     * right below the slot box.</p>
+     */
+    private static final int PEDESTAL_OFFSET_X = 1;
+    private static final int PEDESTAL_OFFSET_Y = SLOT_SIZE;
 
     private static final int ARROW_X = 124;
     private static final int ARROW_Y = INPUT_START_Y + 1;
