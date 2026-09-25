@@ -4,8 +4,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
+import org.tdddd.eej.impl.eej;
 import org.tdddd.eej.impl.registry.EejDataComponents;
 import org.tdddd.eej.impl.registry.EejItems;
+
+import java.util.List;
 
 /**
  * Helpers for reading and writing the element id of an {@link net.minecraft.world.item.ItemStack}.
@@ -17,7 +20,27 @@ public final class ElementStack {
     /** Texture folder (relative to {@code textures/}) that holds every element sprite. */
     public static final String TEXTURE_DIRECTORY = "item/element";
 
+    /**
+     * The element ids eej ships itself, in tab order.
+     *
+     * <p>Creative tabs are built from the event parameters, and that provider does not always carry the
+     * {@code eej:element} datapack registry yet (a tab can be built before the data pack registries are
+     * reachable). When the registry cannot be read, the tab falls back to these ids so the shipped elements are
+     * never missing; a data pack that adds more elements still gets them whenever the registry is readable.</p>
+     */
+    private static final List<Identifier> SHIPPED_IDS = List.of(
+            Identifier.fromNamespaceAndPath(eej.MODID, "fire"),
+            Identifier.fromNamespaceAndPath(eej.MODID, "water"),
+            Identifier.fromNamespaceAndPath(eej.MODID, "wind"),
+            Identifier.fromNamespaceAndPath(eej.MODID, "spirit"),
+            Identifier.fromNamespaceAndPath(eej.MODID, "void"));
+
     private ElementStack() {
+    }
+
+    /** The element ids eej ships itself, used when the datapack registry is not readable. */
+    public static List<Identifier> shippedIds() {
+        return SHIPPED_IDS;
     }
 
     /** The element id of {@code stack}, or {@code null} when it does not carry one. */
