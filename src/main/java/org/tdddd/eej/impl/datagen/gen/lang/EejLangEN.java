@@ -21,6 +21,16 @@ public class EejLangEN extends LanguageProvider {
         add(EejBlocks.PACKED_MUD_ALTAR_STONE.get(), "Packed Mud Altar Stone");
         add(EejItems.SMALL_ITEM_FRAME.get(), "Small Item Filter Frame");
 
+        // Elements: the generic item name plus the display name of every element registered by the built-in data
+        // pack. ElementItem resolves element.<ns>.<path> and falls back to the raw id, so extra elements registered
+        // by another data pack only need their own entry here.
+        add(EejItems.ELEMENT.get(), "Element");
+        add("element.eej.fire", "Fire Element");
+        add("element.eej.water", "Water Element");
+        add("element.eej.wind", "Wind Element");
+        add("element.eej.spirit", "Spirit Element");
+        add("element.eej.void", "Void Element");
+
         // JEI category
         add("category.eej.altar_crafting", "Altar Crafting");
 

@@ -19,6 +19,9 @@ import org.tdddd.eej.impl.altar.blockentity.PackedMudPedestalBlockEntity;
 import org.tdddd.eej.impl.capability.EejCapabilities;
 import org.tdddd.eej.impl.command.EejEnchantmentCommand;
 import org.tdddd.eej.impl.command.EejIslandCommand;
+import org.tdddd.eej.impl.element.EejElementCreativeTab;
+import org.tdddd.eej.impl.element.EejElements;
+import org.tdddd.eej.impl.element.ElementEvents;
 import org.tdddd.eej.impl.island.IslandEvents;
 import org.tdddd.eej.impl.datagen.EejDataGenEvent;
 import org.tdddd.eej.impl.network.EejNetwork;
@@ -55,6 +58,13 @@ public class eej {
         EejCreativeTabs.CREATIVE_TABS.register(modEventBus);
         EejRecipeTypes.register(modEventBus);
 
+        // 1.20.1: the element table was a plain map; in 26.1.2 it is a synced data pack registry, so it must be
+        // declared on the mod bus before any data pack loads.
+        EejElements.register(modEventBus);
+
+        // Adds the element items (plain + one per registered element) to the eej creative tab.
+        EejElementCreativeTab.register(modEventBus);
+
         
         modEventBus.addListener(PackedMudPedestalBlockEntity::registerCapabilities);
 
@@ -70,6 +80,9 @@ public class eej {
 
         // Soul fire purification: item entity / player tick hooks for the mechanic and the 30 s fire immunity.
         NeoForge.EVENT_BUS.register(SoulFirePurificationEvents.class);
+
+        // Element items: non-creative inventory sweep and the "never a dropped item" rule.
+        NeoForge.EVENT_BUS.register(new ElementEvents());
 
         
         

@@ -5,6 +5,7 @@ import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.tdddd.eej.impl.altar.item.SmallItemFrame;
+import org.tdddd.eej.impl.element.ElementItem;
 import org.tdddd.eej.impl.eej;
 
 /**
@@ -35,6 +36,15 @@ public class EejItems {
     public static final DeferredItem<Item> SMALL_ITEM_FRAME = ITEMS.registerItem(
             "small_item_frame",
             properties -> new SmallItemFrame(properties));
+
+    /**
+     * Base element item: meaningful only together with the {@code eej:element} data component, which selects the
+     * name and the sprite. The default 64 stack size is kept; different ids never merge because the component
+     * differs.
+     */
+    public static final DeferredItem<Item> ELEMENT = ITEMS.registerItem(
+            "element",
+            properties -> new ElementItem(properties));
 
     private EejItems() {
     }
