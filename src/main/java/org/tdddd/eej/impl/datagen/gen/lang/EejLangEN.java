@@ -20,6 +20,14 @@ public class EejLangEN extends LanguageProvider {
         add(EejBlocks.PACKED_MUD_PEDESTAL.get(), "Packed Mud Pedestal");
         add(EejBlocks.PACKED_MUD_ALTAR_STONE.get(), "Packed Mud Altar Stone");
         add(EejItems.SMALL_ITEM_FRAME.get(), "Small Item Filter Frame");
+        add(EejItems.ELEMENT.get(), "Element");
+
+        // Elements
+        add("element.eej.fire", "Fire Element");
+        add("element.eej.water", "Water Element");
+        add("element.eej.wind", "Wind Element");
+        add("element.eej.spirit", "Spirit Element");
+        add("element.eej.void", "Void Element");
 
         // JEI category
         add("category.eej.altar_crafting", "Altar Crafting");

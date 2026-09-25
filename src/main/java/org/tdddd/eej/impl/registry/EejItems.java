@@ -6,6 +6,7 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.tdddd.eej.impl.altar.item.SmallItemFrame;
+import org.tdddd.eej.impl.element.ElementItem;
 import org.tdddd.eej.impl.eej;
 
 public class EejItems {
@@ -24,4 +25,8 @@ public class EejItems {
     public static final RegistryObject<Item> SMALL_ITEM_FRAME = ITEMS.register(
             "small_item_frame",
             () -> new SmallItemFrame(new Item.Properties()));
+
+    public static final RegistryObject<Item> ELEMENT = ITEMS.register(
+            "element",
+            () -> new ElementItem(new Item.Properties()));
 }

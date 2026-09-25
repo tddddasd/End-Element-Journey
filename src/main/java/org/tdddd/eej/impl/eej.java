@@ -10,12 +10,15 @@ import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.registries.DataPackRegistryEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.tdddd.eej.impl.altar.AltarPointManager;
 import org.tdddd.eej.impl.command.EejEnchantmentCommand;
 import org.tdddd.eej.impl.command.EejIslandCommand;
 import org.tdddd.eej.impl.compat.geckolib.GeckoLibGlintCompat;
+import org.tdddd.eej.impl.element.EejElements;
+import org.tdddd.eej.impl.element.ElementEvents;
 import org.tdddd.eej.impl.island.IslandEvents;
 import org.tdddd.eej.impl.network.EejNetwork;
 import org.tdddd.eej.impl.registry.EejArgumentTypes;
@@ -47,6 +50,9 @@ public class eej {
         EejCreativeTabs.CREATIVE_TABS.register(modEventBus);
         EejRecipes.register(modEventBus);
 
+        modEventBus.addListener(this::onNewDataPackRegistry);
+        ElementEvents.register(modEventBus, MinecraftForge.EVENT_BUS);
+
         MinecraftForge.EVENT_BUS.addListener(this::onAddReloadListeners);
         MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
         
@@ -56,6 +62,10 @@ public class eej {
         if (FMLEnvironment.dist == Dist.CLIENT && ModList.get().isLoaded("geckolib")) {
             GeckoLibGlintCompat.register();
         }
+    }
+
+    private void onNewDataPackRegistry(DataPackRegistryEvent.NewRegistry event) {
+        EejElements.register(event);
     }
 
     private void onAddReloadListeners(AddReloadListenerEvent event) {
