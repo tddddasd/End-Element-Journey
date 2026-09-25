@@ -62,8 +62,9 @@ public class EejJeiPlugin implements IModPlugin {
     public void registerRecipes(IRecipeRegistration registration) {
         categoriesPublished = false;
         Collection<RecipeHolder<?>> recipes = availableRecipes();
-        List<AltarCraftingRecipe> altar = buildAltarCrafting(recipes);
-        List<SoulFirePurificationJeiRecipe> soulFire = buildSoulFirePurification(recipes);
+        List<AltarCraftingRecipe> altar = buildSafely("altar crafting", () -> buildAltarCrafting(recipes));
+        List<SoulFirePurificationJeiRecipe> soulFire =
+                buildSafely("soul fire purification", () -> buildSoulFirePurification(recipes));
 
         if (!altar.isEmpty()) {
             registration.addRecipes(AltarCraftingCategory.TYPE, altar);
@@ -74,6 +75,23 @@ public class EejJeiPlugin implements IModPlugin {
         categoriesPublished = !altar.isEmpty() || !soulFire.isEmpty();
         eej.LOGGER.info("[eej-jei] registered {} altar and {} soul fire recipes ({} synced recipes available)",
                 altar.size(), soulFire.size(), recipes.size());
+    }
+
+    /**
+     * Runs one category's build and swallows a failure, so a broken entry can never take the other category
+     * (or the whole plugin) down with it. 26.1.2 vanilla ships crafting recipes that throw when assembled from
+     * an empty grid ({@code ImbueRecipe} indexes the input directly and raises
+     * {@code ArrayIndexOutOfBoundsException} on an empty 3x3 grid); an unguarded exception there aborted JEI's
+     * entire recipe registration, which is exactly how both eej categories ended up empty.
+     */
+    private static <T> List<T> buildSafely(String what, java.util.function.Supplier<List<T>> builder) {
+        try {
+            return builder.get();
+        } catch (RuntimeException exception) {
+            eej.LOGGER.error("[eej-jei] failed to build the {} entries; that category stays empty", what,
+                    exception);
+            return List.of();
+        }
     }
 
     @Override
@@ -151,20 +169,27 @@ public class EejJeiPlugin implements IModPlugin {
             if (!(holder.value() instanceof CraftingRecipe recipe)) continue;
             if (recipe.isSpecial()) continue;
 
-            Map<Ingredient, Integer> counts = new LinkedHashMap<>();
-            for (Ingredient ing : recipe.placementInfo().ingredients()) {
-                if (!ing.isEmpty())
-                    counts.put(ing, counts.getOrDefault(ing, 0) + 1);
+            try {
+                Map<Ingredient, Integer> counts = new LinkedHashMap<>();
+                for (Ingredient ing : recipe.placementInfo().ingredients()) {
+                    if (!ing.isEmpty())
+                        counts.put(ing, counts.getOrDefault(ing, 0) + 1);
+                }
+                if (counts.isEmpty()) continue;
+
+                List<AltarCraftingRecipe.IngredientEntry> entries = new ArrayList<>();
+                for (Map.Entry<Ingredient, Integer> e : counts.entrySet())
+                    entries.add(new AltarCraftingRecipe.IngredientEntry(e.getKey(), e.getValue()));
+
+                // Not every crafting recipe survives an empty grid (see buildSafely), so a failure here only
+                // skips this one recipe instead of the whole category.
+                ItemStack output = recipe.assemble(emptyCraftingInput());
+                if (!output.isEmpty())
+                    wrappers.add(new AltarCraftingRecipe(entries, output));
+            } catch (RuntimeException exception) {
+                eej.LOGGER.debug("[eej-jei] skipping crafting recipe {} for the altar category: {}",
+                        holder.id(), exception.toString());
             }
-            if (counts.isEmpty()) continue;
-
-            List<AltarCraftingRecipe.IngredientEntry> entries = new ArrayList<>();
-            for (Map.Entry<Ingredient, Integer> e : counts.entrySet())
-                entries.add(new AltarCraftingRecipe.IngredientEntry(e.getKey(), e.getValue()));
-
-            ItemStack output = recipe.assemble(emptyCraftingInput());
-            if (!output.isEmpty())
-                wrappers.add(new AltarCraftingRecipe(entries, output));
         }
         return wrappers;
     }
