@@ -1,6 +1,7 @@
 package org.tdddd.eej.impl.element;
 
 import com.mojang.serialization.Codec;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceKey;
@@ -49,24 +50,30 @@ public final class EejElements {
     }
 
     /**
-     * @param registryAccess the registry access to read from, may be {@code null}
+     * @param provider the holder provider to read from, may be {@code null}
      * @return the element registry, or {@code null} when it is not loaded (for example on a
      *         server that has not finished starting, or in a context without datapack access)
      */
     @Nullable
-    public static Registry<Element> registry(@Nullable RegistryAccess registryAccess) {
-        if (registryAccess == null) {
+    public static Registry<Element> registry(@Nullable HolderLookup.Provider provider) {
+        if (provider == null) {
             return null;
         }
-        return registryAccess.registry(ELEMENT_REGISTRY).orElse(null);
+        if (provider instanceof RegistryAccess registryAccess) {
+            return registryAccess.registry(ELEMENT_REGISTRY).orElse(null);
+        }
+        // Any other provider (the creative tab parameters wrap one, for example) is asked through the
+        // generic lookup, which answers with an empty Optional instead of throwing when the datapack
+        // registry is not part of it yet.
+        return provider.lookup(ELEMENT_REGISTRY).map(lookup -> (Registry<Element>) lookup).orElse(null);
     }
 
     /**
-     * @param registryAccess the registry access to read from
+     * @param provider the holder provider to read from
      * @return every registered element id, sorted by namespace and then by path
      */
-    public static List<ResourceLocation> allIds(@Nullable RegistryAccess registryAccess) {
-        Registry<Element> registry = registry(registryAccess);
+    public static List<ResourceLocation> allIds(@Nullable HolderLookup.Provider provider) {
+        Registry<Element> registry = registry(provider);
         if (registry == null) {
             return List.of();
         }
@@ -74,13 +81,13 @@ public final class EejElements {
     }
 
     /**
-     * @param registryAccess the registry access to read from
-     * @param id             the element id to look up
+     * @param provider the holder provider to read from
+     * @param id       the element id to look up
      * @return the element registered under {@code id}, or {@code null} when there is none
      */
     @Nullable
-    public static Element get(@Nullable RegistryAccess registryAccess, @Nullable ResourceLocation id) {
-        Registry<Element> registry = registry(registryAccess);
+    public static Element get(@Nullable HolderLookup.Provider provider, @Nullable ResourceLocation id) {
+        Registry<Element> registry = registry(provider);
         if (registry == null || id == null) {
             return null;
         }

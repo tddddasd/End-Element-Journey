@@ -8,27 +8,58 @@ import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import org.tdddd.eej.impl.eej;
 import org.tdddd.eej.impl.registry.EejBlocks;
 
+import java.util.List;
 
+
+/**
+ * JEI category for the altar crafting recipes.
+ *
+ * <p>Every ingredient is drawn as an item standing <b>on</b> a pedestal: the pedestal icon goes below the slot,
+ * with a gap wide enough that the second ingredient row (and its own pedestals) fits underneath.</p>
+ */
 public class AltarCraftingCategory implements IRecipeCategory<AltarCraftingRecipe> {
     public static final RecipeType<AltarCraftingRecipe> TYPE =
             RecipeType.create(eej.MODID, "altar_crafting", AltarCraftingRecipe.class);
 
+    private static final int WIDTH = 176;
+    private static final int HEIGHT = 88;
+
+    private static final int INPUT_START_X = 10;
+    private static final int INPUT_START_Y = 14;
+    private static final int SLOT_SIZE = 18;
+    private static final int ROW_HEIGHT = 36;
+    private static final int MAX_PER_ROW = 6;
+
+    /** Vertical offset of a pedestal icon: one pixel below the slot it belongs to. */
+    private static final int PEDESTAL_OFFSET_Y = SLOT_SIZE + 1;
+    /** Horizontal offset that centres the 16 px icon inside the 18 px slot. */
+    private static final int PEDESTAL_OFFSET_X = 3;
+
+    private static final int ARROW_X = 124;
+    private static final int ARROW_Y = INPUT_START_Y + 1;
+    private static final int OUTPUT_X = 150;
+    private static final int OUTPUT_Y = INPUT_START_Y;
+
+    private static final String HINT_KEY = "jei.eej.altar_crafting.hint";
+
     private final IDrawable background;
     private final IDrawable icon;
     private final IDrawable arrow;
+    private final IDrawable pedestalIcon;
 
     public AltarCraftingCategory(IGuiHelper guiHelper) {
-        this.background = guiHelper.createBlankDrawable(160, 60);
+        this.background = guiHelper.createBlankDrawable(WIDTH, HEIGHT);
         this.icon = guiHelper.createDrawableItemStack(new ItemStack(EejBlocks.PACKED_MUD_PEDESTAL.get()));
-        ResourceLocation arrowTex = new ResourceLocation("jei", "textures/jei/atlas/gui/recipe_arrow.png");
-        this.arrow = guiHelper.createDrawable(arrowTex, 0, 0, 24, 17);
+        this.arrow = guiHelper.getRecipeArrow();
+        this.pedestalIcon = guiHelper.createDrawableItemStack(new ItemStack(EejBlocks.PACKED_MUD_PEDESTAL.get()));
     }
 
     @Override
@@ -43,12 +74,12 @@ public class AltarCraftingCategory implements IRecipeCategory<AltarCraftingRecip
 
     @Override
     public int getWidth() {
-        return 160;
+        return WIDTH;
     }
 
     @Override
     public int getHeight() {
-        return 60;
+        return HEIGHT;
     }
 
     @Override
@@ -57,20 +88,52 @@ public class AltarCraftingCategory implements IRecipeCategory<AltarCraftingRecip
     }
 
     @Override
+    @SuppressWarnings("removal")
+    public IDrawable getBackground() {
+        return background;
+    }
+
+    /** Left edge of the ingredient slot at the given index. */
+    static int inputX(int index) {
+        return INPUT_START_X + (index % MAX_PER_ROW) * SLOT_SIZE;
+    }
+
+    /** Top edge of the ingredient slot at the given index. */
+    static int inputY(int index) {
+        return INPUT_START_Y + (index / MAX_PER_ROW) * ROW_HEIGHT;
+    }
+
+    @Override
     public void setRecipe(IRecipeLayoutBuilder builder, AltarCraftingRecipe recipe, IFocusGroup focuses) {
-        int x = 10, y = 20;
-        for (AltarCraftingRecipe.IngredientEntry entry : recipe.getInputs()) {
-            builder.addSlot(RecipeIngredientRole.INPUT, x, y)
-                    .addItemStacks(entry.getDisplayStacks());
-            x += 18;
-            if (x > 120) { x = 10; y += 18; }
+        // The altar accepts the materials in any order, so the slots are not placed in a shape.
+        builder.setShapeless();
+
+        List<AltarCraftingRecipe.IngredientEntry> inputs = recipe.getInputs();
+        for (int index = 0; index < inputs.size(); index++) {
+            builder.addSlot(RecipeIngredientRole.INPUT, inputX(index), inputY(index))
+                    .addItemStacks(inputs.get(index).getDisplayStacks());
         }
-        builder.addSlot(RecipeIngredientRole.OUTPUT, 140, 20)
+        builder.addSlot(RecipeIngredientRole.OUTPUT, OUTPUT_X, OUTPUT_Y)
                 .addItemStack(recipe.getOutput());
     }
 
     @Override
-    public void draw(AltarCraftingRecipe recipe, IRecipeSlotsView recipeSlotsView, GuiGraphics guiGraphics, double mouseX, double mouseY) {
-        arrow.draw(guiGraphics, 118, 22);
+    public void draw(AltarCraftingRecipe recipe, IRecipeSlotsView recipeSlotsView,
+                     GuiGraphics guiGraphics, double mouseX, double mouseY) {
+        arrow.draw(guiGraphics, ARROW_X, ARROW_Y);
+
+        // The pedestal belongs *under* the item it carries: the icon sits below its slot, never above it.
+        int count = Math.min(recipe.getInputs().size(), MAX_PER_ROW * 2);
+        for (int index = 0; index < count; index++) {
+            pedestalIcon.draw(guiGraphics, inputX(index) + PEDESTAL_OFFSET_X,
+                    inputY(index) + PEDESTAL_OFFSET_Y);
+        }
+
+        if (I18n.exists(HINT_KEY)) {
+            Minecraft minecraft = Minecraft.getInstance();
+            if (minecraft != null && minecraft.font != null) {
+                guiGraphics.drawString(minecraft.font, Component.translatable(HINT_KEY), 2, 3, 0xFF404040, false);
+            }
+        }
     }
 }

@@ -1,6 +1,5 @@
 package org.tdddd.eej.impl.element;
 
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -14,6 +13,8 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import org.tdddd.eej.impl.registry.EejCreativeTabs;
 import org.tdddd.eej.impl.registry.EejItems;
+
+import java.util.List;
 
 /**
  * Game rules that keep element items out of reach of survival players and off the ground, plus the
@@ -58,12 +59,14 @@ public class ElementEvents {
             return;
         }
         event.accept(new ItemStack(EejItems.ELEMENT.get()));
-        // The only holder provider this event is built with is a registry access; anything else
-        // cannot answer datapack registry lookups, so the plain stack above stays the whole tab.
-        if (!(event.getParameters().holders() instanceof RegistryAccess registryAccess)) {
-            return;
+        // The provider carried by the tab parameters does not always hold the eej:element datapack registry yet
+        // (the tab can be built before those registries are reachable), so an unreadable registry falls back to
+        // the ids eej ships itself instead of silently showing the bare element only.
+        List<ResourceLocation> ids = EejElements.allIds(event.getParameters().holders());
+        if (ids.isEmpty()) {
+            ids = ElementStack.shippedIds();
         }
-        for (ResourceLocation id : EejElements.allIds(registryAccess)) {
+        for (ResourceLocation id : ids) {
             event.accept(ElementStack.create(id));
         }
     }
