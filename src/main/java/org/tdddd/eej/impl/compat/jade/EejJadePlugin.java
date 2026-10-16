@@ -94,8 +94,8 @@ public class EejJadePlugin implements IWailaPlugin {
 
     @Override
     public void registerClient(IWailaClientRegistration registration) {
-        registration.registerBlockComponent(ManaBlockProvider.INSTANCE, PackedMudPedestal.class);
-        registration.registerBlockComponent(ManaBlockProvider.INSTANCE, CreativeManaSourceBlock.class);
+        registration.registerBlockComponent(ManaClientProvider.INSTANCE, PackedMudPedestal.class);
+        registration.registerBlockComponent(ManaClientProvider.INSTANCE, CreativeManaSourceBlock.class);
         try {
             registration.addConfig(MANA_INFO, true);
         } catch (IllegalArgumentException ignored) {
@@ -103,12 +103,29 @@ public class EejJadePlugin implements IWailaPlugin {
         }
     }
 
-    
-    public static class ManaBlockProvider implements IBlockComponentProvider, IServerDataProvider<BlockAccessor> {
-        public static final ManaBlockProvider INSTANCE = new ManaBlockProvider();
+    /** Jade since MC 1.21.6 requires the data provider and the component provider to be
+     *  different classes, so the tooltip rendering lives here and shares {@link #getUid()}
+     *  with the server provider - that uid is how Jade pairs the two. */
+    public static class ManaClientProvider implements IBlockComponentProvider {
+        public static final ManaClientProvider INSTANCE = new ManaClientProvider();
 
         @Override
         public void appendTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
+            ManaBlockProvider.appendManaTooltip(tooltip, accessor, config);
+        }
+
+        @Override
+        public ResourceLocation getUid() {
+            return MANA_INFO;
+        }
+    }
+
+
+    
+    public static class ManaBlockProvider implements IServerDataProvider<BlockAccessor> {
+        public static final ManaBlockProvider INSTANCE = new ManaBlockProvider();
+
+                public static void appendManaTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
             int mana;
             int max;
             CompoundTag serverData = accessor.getServerData();
