@@ -15,7 +15,9 @@ public enum CraftingOutcome {
     
     POINTS_INSUFFICIENT("altar.eej.points_insufficient"),
     
-    NO_RECIPE("altar.eej.no_recipe");
+    NO_RECIPE("altar.eej.no_recipe"),
+    
+    NO_MANA("altar.eej.no_mana");
 
     private final String translationKey;
 

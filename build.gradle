@@ -68,6 +68,12 @@ configurations {
 dependencies {
     compileOnly "mezz.jei:jei-26.1.2-neoforge:29.37.0.99"
     compileOnly "com.geckolib:geckolib-neoforge-26.1.2:5.5.2"
+
+    // Jade - optional integration, declared exactly like the sibling 26.1.2 tree
+    // (G:\epca\epca-26.1.2neo\build.gradle lines 85-86). The flat jar cannot come from a Maven
+    // repository this build resolves against.
+    compileOnly files('libs/Jade-mc26.1-NeoForge-26.1.11.jar')
+    runtimeOnly files('libs/Jade-mc26.1-NeoForge-26.1.11.jar')
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

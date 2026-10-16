@@ -50,6 +50,10 @@ public class eej {
         // 1.20.1: IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         EejNetwork.register(modEventBus);
         EejCapabilities.register(modEventBus);
+
+        // Mana storage: NeoForge registers a BlockCapability's providers on the mod bus instead of
+        // attaching them per block entity the way 1.20.1 Forge did.
+        modEventBus.addListener(EejCapabilities::registerManaProviders);
         EejDataComponents.register(modEventBus);
         EejArgumentTypes.register(modEventBus);
         EejBlocks.BLOCKS.register(modEventBus);

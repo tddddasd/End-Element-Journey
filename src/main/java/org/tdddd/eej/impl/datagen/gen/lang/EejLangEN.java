@@ -19,6 +19,7 @@ public class EejLangEN extends LanguageProvider {
         // Blocks and items
         add(EejBlocks.PACKED_MUD_PEDESTAL.get(), "Packed Mud Pedestal");
         add(EejBlocks.PACKED_MUD_ALTAR_STONE.get(), "Packed Mud Altar Stone");
+        add(EejBlocks.CREATIVE_MANA_SOURCE.get(), "Creative Mana Source");
         add(EejItems.SMALL_ITEM_FRAME.get(), "Small Item Filter Frame");
 
         // Elements: the generic item name plus the display name of every element registered by the built-in data
@@ -62,6 +63,10 @@ public class EejLangEN extends LanguageProvider {
         add("altar.eej.structure_invalid_reason", "Invalid altar structure: %s");
         add("altar.eej.filter_rejected", "This item is rejected by the pedestal filter (%s)");
         add("altar.eej.filter_cleared", "Cleared this pedestal's filter");
+        add("altar.eej.no_mana", "Not enough mana");
+
+        // JEI: mana the ritual needs (plain integer, never abbreviated)
+        add("jei.eej.altar_crafting.mana", "Requires %s mana");
 
         // JEI altar crafting category hint
         add("jei.eej.altar_crafting.hint", "Place the materials on any pedestals - order does not matter");

@@ -15,7 +15,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -25,7 +24,11 @@ import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import org.jetbrains.annotations.Nullable;
 import org.tdddd.eej.api.AltarItemContainer;
+import org.tdddd.eej.api.mana.ManaStorage;
 import org.tdddd.eej.impl.altar.AbstractAltarBlock;
+import org.tdddd.eej.impl.capability.EejCapabilities;
+import org.tdddd.eej.impl.capability.ManaStorageProvider;
+import org.tdddd.eej.impl.network.AltarManaSyncPacket;
 import org.tdddd.eej.impl.network.PedestalItemSyncPacket;
 import org.tdddd.eej.impl.registry.EejBlockEntities;
 
@@ -37,8 +40,23 @@ import java.util.Map;
 
 
 public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarItemContainer {
+    
+    public static final int MAX_MANA = 50;
+
+    
+    private static final long MANA_FLASH_HOLD_MS = 200L;
+
+    
+    private static final long MANA_FLASH_FADE_MS = 1600L;
+
     private final ItemStackHandler itemHandler = createHandler();
     private final Map<Direction, IItemHandler> sideHandlers = new EnumMap<>(Direction.class);
+
+    
+    private final ManaStorage manaStorage = new ManaStorage(MAX_MANA).onChanged(this::onManaChanged);
+
+    
+    private long clientManaFlashStartedAt = 0L;
 
     private List<String> filterData = Collections.emptyList();
     private boolean isMainPedestal = false;
@@ -130,8 +148,75 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
     }
 
     
+    public ManaStorage getManaStorage() {
+        return this.manaStorage;
+    }
+
+    private void onManaChanged() {
+        this.setChanged();
+        if (this.level != null && !this.level.isClientSide()) {
+            this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
+            this.syncMana();
+        }
+    }
 
     
+    public void syncMana() {
+        this.sendMana(false);
+    }
+
+    private void sendMana(boolean flash) {
+        if (this.level == null || this.level.isClientSide()) {
+            return;
+        }
+        if (!(this.level instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(
+                serverLevel,
+                new net.minecraft.world.level.ChunkPos(this.worldPosition.getX() >> 4,
+                        this.worldPosition.getZ() >> 4),
+                new AltarManaSyncPacket(this.worldPosition, this.manaStorage.getManaStored(), flash));
+    }
+
+    
+    public void flashManaBar() {
+        if (this.level != null && !this.level.isClientSide()) {
+            this.setChanged();
+            this.sendMana(true);
+        } else {
+            
+            this.clientManaFlashStartedAt = System.currentTimeMillis();
+        }
+    }
+
+    
+    public void applyClientMana(int mana, boolean flash) {
+        this.manaStorage.setManaSilently(mana);
+        if (flash) {
+            this.clientManaFlashStartedAt = System.currentTimeMillis();
+        }
+    }
+
+    
+    public float getManaFlashIntensity() {
+        if (this.clientManaFlashStartedAt <= 0L) {
+            return 0.0F;
+        }
+        long elapsed = System.currentTimeMillis() - this.clientManaFlashStartedAt;
+        if (elapsed < 0L) {
+            return 0.0F;
+        }
+        if (elapsed <= MANA_FLASH_HOLD_MS) {
+            return 1.0F;
+        }
+        long fading = elapsed - MANA_FLASH_HOLD_MS;
+        if (fading >= MANA_FLASH_FADE_MS) {
+            return 0.0F;
+        }
+        return 1.0F - (float) fading / (float) MANA_FLASH_FADE_MS;
+    }
+
     @Override
     public void onDataPacket(Connection net, ValueInput valueInput) {
         handleUpdateTag(valueInput);
@@ -144,6 +229,7 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
+        this.manaStorage.load(input);
         input.child("inventory").ifPresent(itemHandler::deserialize);
         List<String> filters = new ArrayList<>();
         input.listOrEmpty("filterData", com.mojang.serialization.Codec.STRING).forEach(filters::add);
@@ -155,6 +241,7 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
     @Override
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
+        this.manaStorage.save(output);
         ValueOutput inventory = output.child("inventory");
         itemHandler.serialize(inventory);
         ValueOutput.TypedOutputList<String> list = output.list("filterData", com.mojang.serialization.Codec.STRING);
@@ -186,11 +273,6 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    
-    
-    
-    
-
     public void syncItem(ItemStack stack) {
         if (stack.isEmpty()) {
             itemHandler.setStackInSlot(0, ItemStack.EMPTY);
@@ -217,10 +299,9 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
         super.onLoad();
         if (level instanceof ServerLevel) {
             syncToClient();
+            syncMana();
         }
     }
-
-    
 
     
     public static void registerCapabilities(RegisterCapabilitiesEvent event) {
@@ -229,6 +310,10 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
         
         event.registerBlockEntity(Capabilities.Item.BLOCK, EejBlockEntities.PACKED_MUD_PEDESTAL.get(),
                 (be, side) -> side == null ? null : new SideFilteredResourceHandler(be, side));
+
+        
+        event.registerBlockEntity(EejCapabilities.MANA_STORAGE, EejBlockEntities.PACKED_MUD_PEDESTAL.get(),
+                (be, side) -> new ManaStorageProvider(be.getManaStorage()).getManaStorage());
     }
 
     private boolean isLocked() {

@@ -24,7 +24,11 @@ public class EejBlockStateData extends ModelProvider {
     }
 
     
-    private static final java.util.Set<String> MANUAL_BLOCKS = java.util.Set.of("packed_mud_pedestal");
+    private static final java.util.Set<String> MANUAL_BLOCKS = java.util.Set.of(
+            "packed_mud_pedestal",
+            // No texture at all: the model is hand-written and references #missing on purpose, so it
+            // must never be regenerated from a texture.
+            "creative_mana_source");
 
     @Override
     protected Stream<? extends Holder<Block>> getKnownBlocks() {

@@ -1,5 +1,6 @@
 {
   "block.eej.packed_mud_altar_stone": "泥坯祭坛石",
+  "block.eej.creative_mana_source": "创造模式魔能源",
   "block.eej.packed_mud_pedestal": "泥坯祭台",
   "category.eej.altar_crafting": "祭坛合成",
   "category.eej.soul_fire_purification": "灵魂火净化",
@@ -24,6 +25,7 @@
   "item.small_item_frame.max_reached": "无法添加（已达上限或已存在）",
   "item.small_item_frame.no_offhand": "副手无物品",
   "itemGroup.eej.main_tab": "终末-元素奇旅",
+  "altar.eej.no_mana": "没有足够的魔力",
   "altar.eej.no_material": "祭台上没有可用的材料",
   "altar.eej.no_recipe": "没有匹配的祭坛配方",
   "altar.eej.points_insufficient": "祭坛点数不足（需要 %s，当前 %s）",
@@ -34,6 +36,7 @@
   "altar.eej.filter_rejected": "该物品不被祭台过滤器接受（%s）",
   "altar.eej.filter_cleared": "已清除该祭台的过滤器",
   "jei.eej.altar_crafting.hint": "把材料放在任意祭台上，顺序无关",
+  "jei.eej.altar_crafting.mana": "需要 %s mana",
   "commands.eej.island.info": "区块 %s,%s：底层基岩 %s，3×3 非真空岛底层合计 %s，%s",
   "commands.eej.island.set.vacuum": "已将区块 %s,%s 设为真空岛区块",
   "commands.eej.island.set.nonvacuum": "已将区块 %s,%s 设为非真空岛区块",

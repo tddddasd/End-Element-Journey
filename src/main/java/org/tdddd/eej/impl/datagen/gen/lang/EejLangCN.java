@@ -20,6 +20,7 @@ public class EejLangCN extends LanguageProvider {
         
         add(EejBlocks.PACKED_MUD_PEDESTAL.get(), "泥坯祭台");
         add(EejBlocks.PACKED_MUD_ALTAR_STONE.get(), "泥坯祭坛石");
+        add(EejBlocks.CREATIVE_MANA_SOURCE.get(), "创造模式魔能源");
         add(EejItems.SMALL_ITEM_FRAME.get(), "小型物品过滤展示框");
 
         
@@ -61,6 +62,10 @@ public class EejLangCN extends LanguageProvider {
         add("altar.eej.structure_invalid_reason", "祭坛结构无效：%s");
         add("altar.eej.filter_rejected", "该物品不被祭台过滤器接受（%s）");
         add("altar.eej.filter_cleared", "已清除该祭台的过滤器");
+        add("altar.eej.no_mana", "没有足够的魔力");
+
+        
+        add("jei.eej.altar_crafting.mana", "需要 %s mana");
 
         
         add("jei.eej.altar_crafting.hint", "把材料放在任意祭台上，顺序无关");

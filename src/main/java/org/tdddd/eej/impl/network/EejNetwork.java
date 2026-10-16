@@ -21,6 +21,8 @@ public class EejNetwork {
         PayloadRegistrar registrar = event.registrar(PROTOCOL_VERSION);
         registrar.playToClient(PedestalItemSyncPacket.TYPE, PedestalItemSyncPacket.STREAM_CODEC,
                 PedestalItemSyncPacket::handle);
+        registrar.playToClient(AltarManaSyncPacket.TYPE, AltarManaSyncPacket.STREAM_CODEC,
+                AltarManaSyncPacket::handle);
         registrar.playToClient(MobEnchantmentSyncPacket.TYPE, MobEnchantmentSyncPacket.STREAM_CODEC,
                 MobEnchantmentSyncPacket::handle);
         registrar.playToServer(SmallItemFrameDataPacket.TYPE, SmallItemFrameDataPacket.STREAM_CODEC,

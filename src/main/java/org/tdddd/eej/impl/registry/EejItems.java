@@ -32,6 +32,10 @@ public class EejItems {
             "packed_mud_altar_stone",
             properties -> new BlockItem(EejBlocks.PACKED_MUD_ALTAR_STONE.get(), properties.useBlockDescriptionPrefix()));
 
+    public static final DeferredItem<Item> CREATIVE_MANA_SOURCE = ITEMS.registerItem(
+            "creative_mana_source",
+            properties -> new BlockItem(EejBlocks.CREATIVE_MANA_SOURCE.get(), properties.useBlockDescriptionPrefix()));
+
     /** Small item filter frame: sets the pedestal's filter condition. */
     public static final DeferredItem<Item> SMALL_ITEM_FRAME = ITEMS.registerItem(
             "small_item_frame",

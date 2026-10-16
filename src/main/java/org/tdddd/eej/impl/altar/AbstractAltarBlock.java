@@ -1,6 +1,7 @@
 package org.tdddd.eej.impl.altar;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -43,7 +44,10 @@ import org.tdddd.eej.api.AltarBlockTags;
 import org.tdddd.eej.api.AltarInteractionRegistry;
 import org.tdddd.eej.api.AltarItemContainer;
 import org.tdddd.eej.api.AltarStructure;
+import org.tdddd.eej.api.mana.IManaStorage;
+import org.tdddd.eej.impl.altar.blockentity.PackedMudPedestalBlockEntity;
 import org.tdddd.eej.impl.altar.item.SmallItemFrame;
+import org.tdddd.eej.impl.capability.EejCapabilities;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,6 +68,12 @@ import java.util.stream.Collectors;
 public abstract class AbstractAltarBlock extends BaseEntityBlock {
     
     protected static final VoxelShape PEDESTAL_SHAPE = Block.box(3.0D, 0.0D, 3.0D, 13.0D, 16.0D, 13.0D);
+
+    
+    public static final int EXPERIENCE_PER_MANA = 5;
+
+    
+    public static final int MANA_PER_ALTAR = 1;
 
     
     private final int altarPoints;
@@ -225,6 +235,12 @@ public abstract class AbstractAltarBlock extends BaseEntityBlock {
 
         setMainAltar(level, pos);
 
+        
+        
+        if (manaStorageAt(level, pos) != null && !hasEnoughMana(level, pos, countDistinctManaSources(data))) {
+            inputMana(level, pos, player);
+        }
+
         ItemStack targetStack = getFrameTarget(level, pos);
         CraftingOutcome outcome = performCrafting(level, pos, data, targetStack);
         if (outcome == CraftingOutcome.SUCCESS) {
@@ -243,6 +259,7 @@ public abstract class AbstractAltarBlock extends BaseEntityBlock {
             case SUCCESS -> null;
             case NO_MATERIAL -> Component.translatable("altar.eej.no_material");
             case NO_RECIPE -> Component.translatable("altar.eej.no_recipe");
+            case NO_MANA -> Component.translatable("altar.eej.no_mana");
             case POINTS_INSUFFICIENT -> Component.translatable("altar.eej.points_insufficient",
                     data.totalPoints, data.requiredPoints);
             case NOT_MAIN_PEDESTAL -> data.mainPedestal == null
@@ -269,6 +286,46 @@ public abstract class AbstractAltarBlock extends BaseEntityBlock {
         if (level.isClientSide()) return;
         if (player instanceof ServerPlayer serverPlayer) {
             serverPlayer.sendSystemMessage(message, true);
+        }
+    }
+
+    
+    @Nullable
+    protected IManaStorage manaStorageAt(Level level, BlockPos pos) {
+        return level.getCapability(EejCapabilities.MANA_STORAGE, pos, (net.minecraft.core.Direction) null);
+    }
+
+    
+    protected static int countDistinctManaSources(AltarStructure data) {
+        return Math.max(1, data.pedestalPositions.size()) * MANA_PER_ALTAR;
+    }
+
+    
+    protected boolean hasEnoughMana(Level level, BlockPos pos, int cost) {
+        IManaStorage storage = manaStorageAt(level, pos);
+        return storage == null || storage.getManaStored() >= cost;
+    }
+
+    
+    protected boolean inputMana(Level level, BlockPos pos, Player player) {
+        IManaStorage storage = manaStorageAt(level, pos);
+        if (storage == null || storage.isFull()) {
+            return false;
+        }
+        if (player.totalExperience < EXPERIENCE_PER_MANA) {
+            return false;
+        }
+        if (storage.receiveMana(1, null, false) <= 0) {
+            return false;
+        }
+        player.giveExperiencePoints(-EXPERIENCE_PER_MANA);
+        return true;
+    }
+
+    
+    protected void onInsufficientMana(Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof PackedMudPedestalBlockEntity pedestal) {
+            pedestal.flashManaBar();
         }
     }
 
@@ -560,6 +617,18 @@ public abstract class AbstractAltarBlock extends BaseEntityBlock {
         int[] slotToSource = placement.slotToSource();
         for (int source : slotToSource) {
             if (source >= 0) usedPerSource[source]++;
+        }
+
+        
+        int manaCost = countDistinctManaSources(data);
+        IManaStorage mana = manaStorageAt(level, corePos);
+        if (mana != null) {
+            if (mana.getManaStored() < manaCost) {
+                
+                onInsufficientMana(level, corePos);
+                return CraftingOutcome.NO_MANA;
+            }
+            mana.consume(manaCost);
         }
 
         List<List<ItemStack>> remaindersBySource = new ArrayList<>(sourcePositions.size());

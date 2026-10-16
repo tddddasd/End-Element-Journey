@@ -19,6 +19,7 @@ public class EejCreativeTabs {
                     .displayItems((parameters, output) -> {
                         output.accept(EejItems.PACKED_MUD_PEDESTAL.get());
                         output.accept(EejItems.PACKED_MUD_ALTAR_STONE.get());
+                        output.accept(EejItems.CREATIVE_MANA_SOURCE.get());
                         output.accept(EejItems.SMALL_ITEM_FRAME.get());
                     })
                     .build());

@@ -5,6 +5,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import org.tdddd.eej.impl.altar.PackedMudAltarStone;
 import org.tdddd.eej.impl.altar.PackedMudPedestal;
 import org.tdddd.eej.impl.eej;
+import org.tdddd.eej.impl.mana.CreativeManaSourceBlock;
 
 /**
  * Block registry.
@@ -35,6 +36,12 @@ public class EejBlocks {
     public static final DeferredBlock<PackedMudAltarStone> PACKED_MUD_ALTAR_STONE = BLOCKS.registerBlock(
             "packed_mud_altar_stone",
             PackedMudAltarStone::new
+    );
+
+    /** Creative mana source: stored == max == Integer.MAX_VALUE, pushes mana into its six neighbours. */
+    public static final DeferredBlock<CreativeManaSourceBlock> CREATIVE_MANA_SOURCE = BLOCKS.registerBlock(
+            "creative_mana_source",
+            CreativeManaSourceBlock::new
     );
 
     private EejBlocks() {

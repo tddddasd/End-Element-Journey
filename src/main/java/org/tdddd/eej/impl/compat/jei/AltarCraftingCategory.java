@@ -13,6 +13,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import org.tdddd.eej.api.mana.ManaFormat;
 import org.tdddd.eej.impl.eej;
 import org.tdddd.eej.impl.registry.EejBlocks;
 
@@ -54,6 +55,15 @@ public class AltarCraftingCategory implements IRecipeCategory<AltarCraftingRecip
     private static final int OUTPUT_Y = INPUT_START_Y;
 
     private static final String HINT_KEY = "jei.eej.altar_crafting.hint";
+
+    
+    private static final String MANA_KEY = "jei.eej.altar_crafting.mana";
+
+    
+    private static final int MANA_TEXT_Y = HEIGHT - 11;
+
+    
+    private static final int MANA_TEXT_COLOR = 0xFFB03060;
 
     private final IDrawable icon;
     private final IDrawable arrow;
@@ -133,6 +143,15 @@ public class AltarCraftingCategory implements IRecipeCategory<AltarCraftingRecip
             if (minecraft != null && minecraft.font != null) {
                 guiGraphics.text(minecraft.font, Component.translatable(HINT_KEY), 2, 3, 0xFF404040, false);
             }
+        }
+
+        // Mana the ritual needs: 1 mana per altar it consumes an item from, always a plain integer
+        // here (no K/M/G abbreviation), as requested.
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft != null && minecraft.font != null) {
+            guiGraphics.text(minecraft.font,
+                    Component.translatable(MANA_KEY, ManaFormat.exact(recipe.getManaCost())),
+                    2, MANA_TEXT_Y, MANA_TEXT_COLOR, false);
         }
     }
 }
