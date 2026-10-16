@@ -92,12 +92,18 @@ public class EejJadePlugin implements IWailaPlugin {
      * paint the same thing: a filled remainder plus a partial fill, in the same colours and size.
      */
     public static class ManaBarElement extends Element {
-        private final float ratio;
+        private static final int BORDER_COLOR = 0xFFFFFFFF;
+        private static final float RATIO_PER_SECOND = 0.35F;
+
+        private static float animatedRatio = -1.0F;
+        private static long lastUpdateNanos = 0L;
+
+        private final float target;
         private final int fillColor;
         private final int emptyColor;
 
-        public ManaBarElement(float ratio, int fillColor, int emptyColor) {
-            this.ratio = Mth.clamp(ratio, 0.0F, 1.0F);
+        public ManaBarElement(float target, int fillColor, int emptyColor) {
+            this.target = Mth.clamp(target, 0.0F, 1.0F);
             this.fillColor = fillColor;
             this.emptyColor = emptyColor;
             this.size = new Vec2(BAR_WIDTH, BAR_HEIGHT);
@@ -112,13 +118,42 @@ public class EejJadePlugin implements IWailaPlugin {
         public void render(GuiGraphics graphics, float x, float y, float maxX, float maxY) {
             int left = (int) x;
             int top = (int) y;
-            int width = (int) BAR_WIDTH;
-            int height = (int) BAR_HEIGHT;
-            graphics.fill(left, top, left + width, top + height, this.emptyColor);
-            int filled = Math.round(width * this.ratio);
+            int right = left + (int) BAR_WIDTH;
+            int bottom = top + (int) BAR_HEIGHT;
+
+            float shown = animate(this.target);
+
+            graphics.fill(left + 1, top + 1, right - 1, bottom - 1, this.emptyColor);
+            int innerWidth = (int) BAR_WIDTH - 2;
+            int filled = Math.round(innerWidth * shown);
             if (filled > 0) {
-                graphics.fill(left, top, left + filled, top + height, this.fillColor);
+                graphics.fill(left + 1, top + 1, left + 1 + filled, bottom - 1, this.fillColor);
             }
+
+            graphics.fill(left, top, right, top + 1, BORDER_COLOR);
+            graphics.fill(left, bottom - 1, right, bottom, BORDER_COLOR);
+            graphics.fill(left, top + 1, left + 1, bottom - 1, BORDER_COLOR);
+            graphics.fill(right - 1, top + 1, right, bottom - 1, BORDER_COLOR);
+        }
+
+        /** Time based, so the bar keeps easing even when Jade does not rebuild the tooltip. */
+        private static float animate(float target) {
+            long now = System.nanoTime();
+            if (animatedRatio < 0.0F) {
+                animatedRatio = target;
+                lastUpdateNanos = now;
+                return animatedRatio;
+            }
+            float elapsed = Math.min((now - lastUpdateNanos) / 1_000_000_000.0F, 0.25F);
+            lastUpdateNanos = now;
+            float step = RATIO_PER_SECOND * elapsed;
+            float delta = target - animatedRatio;
+            if (Math.abs(delta) <= step) {
+                animatedRatio = target;
+            } else {
+                animatedRatio += Math.signum(delta) * step;
+            }
+            return Mth.clamp(animatedRatio, 0.0F, 1.0F);
         }
     }
 
