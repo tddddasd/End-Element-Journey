@@ -34,12 +34,15 @@ public class ManaStorageProvider implements ICapabilitySerializable<CompoundTag>
 
     @Override
     public CompoundTag serializeNBT() {
-        return this.data.save(new CompoundTag());
+        // A null storage must never take the world tick down while saving.
+        return this.data == null ? new CompoundTag() : this.data.save(new CompoundTag());
     }
 
     @Override
     public void deserializeNBT(CompoundTag nbt) {
-        this.data.load(nbt);
+        if (this.data != null) {
+            this.data.load(nbt);
+        }
     }
 
     public void invalidate() {
