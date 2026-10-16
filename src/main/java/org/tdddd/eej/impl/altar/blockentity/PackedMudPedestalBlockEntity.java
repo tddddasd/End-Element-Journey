@@ -25,7 +25,9 @@ import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 import org.tdddd.eej.api.AltarItemContainer;
+import org.tdddd.eej.api.mana.ManaStorage;
 import org.tdddd.eej.impl.altar.AbstractAltarBlock;
+import org.tdddd.eej.impl.network.AltarManaSyncPacket;
 import org.tdddd.eej.impl.network.EejNetwork;
 import org.tdddd.eej.impl.network.PedestalItemSyncPacket;
 import org.tdddd.eej.impl.registry.EejBlockEntities;
@@ -38,8 +40,23 @@ import java.util.List;
 import java.util.Map;
 
 public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarItemContainer {
+    
+    public static final int MAX_MANA = 50;
+
+    
+    private static final long MANA_FLASH_HOLD_MS = 200L;
+
+    
+    private static final long MANA_FLASH_FADE_MS = 1600L;
+
     private final ItemStackHandler itemHandler = createHandler();
     private final Map<Direction, LazyOptional<IItemHandler>> sideHandlers = new EnumMap<>(Direction.class);
+
+    
+    private final ManaStorage manaStorage = new ManaStorage(MAX_MANA).onChanged(this::onManaChanged);
+
+    
+    private long clientManaFlashStartedAt = 0L;
 
     private List<String> filterData = Collections.emptyList();
     private boolean isMainPedestal = false;
@@ -125,6 +142,77 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
         this.isMainPedestal = isMain;
     }
 
+    
+    public ManaStorage getManaStorage() {
+        return this.manaStorage;
+    }
+
+    private void onManaChanged() {
+        this.setChanged();
+        if (this.level != null && !this.level.isClientSide) {
+            this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
+            this.syncMana();
+        }
+    }
+
+    
+    public void syncMana() {
+        this.sendMana(false);
+    }
+
+    private void sendMana(boolean flash) {
+        if (this.level == null || this.level.isClientSide) {
+            return;
+        }
+        Packet<?> packet = EejNetwork.INSTANCE.toVanillaPacket(
+                new AltarManaSyncPacket(this.worldPosition, this.manaStorage.getManaStored(), flash),
+                net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT
+        );
+        ServerLevel serverLevel = (ServerLevel) this.level;
+        LevelChunk chunk = serverLevel.getChunkAt(this.worldPosition);
+        serverLevel.getChunkSource().chunkMap.getPlayers(chunk.getPos(), false).forEach(player -> {
+            player.connection.send(packet);
+        });
+    }
+
+    
+    public void flashManaBar() {
+        if (this.level != null && !this.level.isClientSide) {
+            this.setChanged();
+            this.sendMana(true);
+        } else {
+            
+            this.clientManaFlashStartedAt = System.currentTimeMillis();
+        }
+    }
+
+    
+    public void applyClientMana(int mana, boolean flash) {
+        this.manaStorage.setManaSilently(mana);
+        if (flash) {
+            this.clientManaFlashStartedAt = System.currentTimeMillis();
+        }
+    }
+
+    
+    public float getManaFlashIntensity() {
+        if (this.clientManaFlashStartedAt <= 0L) {
+            return 0.0F;
+        }
+        long elapsed = System.currentTimeMillis() - this.clientManaFlashStartedAt;
+        if (elapsed < 0L) {
+            return 0.0F;
+        }
+        if (elapsed <= MANA_FLASH_HOLD_MS) {
+            return 1.0F;
+        }
+        long fading = elapsed - MANA_FLASH_HOLD_MS;
+        if (fading >= MANA_FLASH_FADE_MS) {
+            return 0.0F;
+        }
+        return 1.0F - (float) fading / (float) MANA_FLASH_FADE_MS;
+    }
+
     @Override
     public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
         handleUpdateTag(pkt.getTag());
@@ -158,6 +246,7 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
+        this.manaStorage.load(tag);
         if (tag.contains("inventory")) {
             itemHandler.deserializeNBT(tag.getCompound("inventory"));
         }
@@ -175,6 +264,7 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
+        this.manaStorage.save(tag);
         tag.put("inventory", itemHandler.serializeNBT());
         ListTag list = new ListTag();
         for (String s : filterData) {
@@ -310,6 +400,7 @@ public class PackedMudPedestalBlockEntity extends BlockEntity implements AltarIt
         super.onLoad();
         if (level instanceof ServerLevel) {
             syncToClient();
+            syncMana();
         }
     }
 

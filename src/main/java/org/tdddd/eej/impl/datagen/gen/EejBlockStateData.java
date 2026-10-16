@@ -16,7 +16,8 @@ public class EejBlockStateData extends BlockStateProvider {
 
     
     private static final Set<String> MANUAL_BLOCKS = Set.of(
-            "packed_mud_pedestal"
+            "packed_mud_pedestal",
+            "creative_mana_source"
     );
 
     public EejBlockStateData(PackOutput output, ExistingFileHelper exFileHelper) {

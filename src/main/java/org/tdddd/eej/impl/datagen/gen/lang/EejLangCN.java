@@ -19,6 +19,7 @@ public class EejLangCN extends LanguageProvider {
         
         add(EejBlocks.PACKED_MUD_PEDESTAL.get(), "泥坯祭台");
         add(EejBlocks.PACKED_MUD_ALTAR_STONE.get(), "泥坯祭坛石");
+        add(EejBlocks.CREATIVE_MANA_SOURCE.get(), "创造模式魔能源");
         add(EejItems.SMALL_ITEM_FRAME.get(), "小型物品过滤展示框");
         add(EejItems.ELEMENT.get(), "元素");
 
@@ -32,6 +33,9 @@ public class EejLangCN extends LanguageProvider {
         
         add("category.eej.altar_crafting", "祭坛合成");
         add("category.eej.soul_fire_purification", "灵魂火净化");
+
+        
+        add("jei.eej.altar_crafting.mana", "需要 %s mana");
 
         add("item.small_item_frame.added", "已记录：%s");
         add("item.small_item_frame.max_reached", "无法添加（已达上限或已存在）");

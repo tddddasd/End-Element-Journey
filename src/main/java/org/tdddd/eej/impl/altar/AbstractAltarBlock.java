@@ -38,6 +38,8 @@ import org.tdddd.eej.api.AltarBlockTags;
 import org.tdddd.eej.api.AltarInteractionRegistry;
 import org.tdddd.eej.api.AltarItemContainer;
 import org.tdddd.eej.api.AltarStructure;
+import org.tdddd.eej.api.mana.ManaStorage;
+import org.tdddd.eej.impl.altar.blockentity.PackedMudPedestalBlockEntity;
 import org.tdddd.eej.impl.altar.item.SmallItemFrame;
 
 import java.util.ArrayList;
@@ -56,6 +58,12 @@ import java.util.stream.Collectors;
 public abstract class AbstractAltarBlock extends BaseEntityBlock {
     
     protected static final VoxelShape PEDESTAL_SHAPE = Block.box(3.0D, 0.0D, 3.0D, 13.0D, 16.0D, 13.0D);
+
+    
+    public static final int EXPERIENCE_PER_MANA = 5;
+
+    
+    public static final int MANA_PER_ALTAR = 1;
 
     
     private final int altarPoints;
@@ -146,10 +154,17 @@ public abstract class AbstractAltarBlock extends BaseEntityBlock {
             if (data != null && data.isValidForCrafting && data.mainPedestal != null && data.mainPedestal.equals(pos)) {
                 setMainAltar(level, pos);
 
+                
+                inputMana(level, pos, player);
+
                 ItemStack targetStack = getFrameTarget(level, pos);
                 if (performCrafting(level, pos, data, targetStack)) {
                     level.playSound(null, pos, SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
                 }
+                return InteractionResult.SUCCESS;
+            }
+            
+            if (inputMana(level, pos, player)) {
                 return InteractionResult.SUCCESS;
             }
             return InteractionResult.PASS;
@@ -173,6 +188,36 @@ public abstract class AbstractAltarBlock extends BaseEntityBlock {
             }
         }
         return InteractionResult.PASS;
+    }
+
+    
+    @Nullable
+    protected ManaStorage getManaStorage(Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof PackedMudPedestalBlockEntity pedestal
+                ? pedestal.getManaStorage() : null;
+    }
+
+    
+    protected boolean inputMana(Level level, BlockPos pos, Player player) {
+        ManaStorage storage = getManaStorage(level, pos);
+        if (storage == null || storage.isFull()) {
+            return false;
+        }
+        if (player.totalExperience < EXPERIENCE_PER_MANA) {
+            return false;
+        }
+        if (storage.receiveMana(1, null, false) <= 0) {
+            return false;
+        }
+        player.giveExperiencePoints(-EXPERIENCE_PER_MANA);
+        return true;
+    }
+
+    
+    protected void onInsufficientMana(Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof PackedMudPedestalBlockEntity pedestal) {
+            pedestal.flashManaBar();
+        }
     }
 
     
@@ -445,6 +490,18 @@ public abstract class AbstractAltarBlock extends BaseEntityBlock {
                 }
             }
             if (!found) return false;
+        }
+
+        
+        int manaCost = new HashSet<>(sourceIndices).size() * MANA_PER_ALTAR;
+        ManaStorage mana = getManaStorage(level, corePos);
+        if (mana != null) {
+            if (mana.getManaStored() < manaCost) {
+                
+                onInsufficientMana(level, corePos);
+                return false;
+            }
+            mana.consume(manaCost);
         }
 
         CraftingContainer dummyContainer = new TransientCraftingContainer(

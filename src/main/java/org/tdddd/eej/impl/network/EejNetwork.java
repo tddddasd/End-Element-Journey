@@ -33,5 +33,10 @@ public class EejNetwork {
                 MobEnchantmentSyncPacket::encode,
                 MobEnchantmentSyncPacket::decode,
                 MobEnchantmentSyncPacket::handle);
+
+        INSTANCE.registerMessage(id++, AltarManaSyncPacket.class,
+                AltarManaSyncPacket::encode,
+                AltarManaSyncPacket::decode,
+                AltarManaSyncPacket::handle);
     }
 }

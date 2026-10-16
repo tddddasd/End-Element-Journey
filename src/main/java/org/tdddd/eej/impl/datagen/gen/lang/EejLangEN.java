@@ -19,6 +19,7 @@ public class EejLangEN extends LanguageProvider {
         // Blocks and items
         add(EejBlocks.PACKED_MUD_PEDESTAL.get(), "Packed Mud Pedestal");
         add(EejBlocks.PACKED_MUD_ALTAR_STONE.get(), "Packed Mud Altar Stone");
+        add(EejBlocks.CREATIVE_MANA_SOURCE.get(), "Creative Mana Source");
         add(EejItems.SMALL_ITEM_FRAME.get(), "Small Item Filter Frame");
         add(EejItems.ELEMENT.get(), "Element");
 
@@ -32,6 +33,9 @@ public class EejLangEN extends LanguageProvider {
         // JEI category
         add("category.eej.altar_crafting", "Altar Crafting");
         add("category.eej.soul_fire_purification", "Soul Fire Purification");
+
+        // JEI: mana the ritual needs (plain integer, never abbreviated)
+        add("jei.eej.altar_crafting.mana", "Requires %s mana");
 
         // Small item frame tooltips
         add("item.small_item_frame.added", "Recorded: %s");

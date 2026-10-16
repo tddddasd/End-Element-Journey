@@ -27,11 +27,13 @@ public class EejLootTableData extends LootTableProvider {
         protected void generate() {
             dropSelf(EejBlocks.PACKED_MUD_PEDESTAL.get());
             dropSelf(EejBlocks.PACKED_MUD_ALTAR_STONE.get());
+            dropSelf(EejBlocks.CREATIVE_MANA_SOURCE.get());
         }
 
         @Override
         protected Iterable<Block> getKnownBlocks() {
-            return List.of(EejBlocks.PACKED_MUD_PEDESTAL.get(), EejBlocks.PACKED_MUD_ALTAR_STONE.get());
+            return List.of(EejBlocks.PACKED_MUD_PEDESTAL.get(), EejBlocks.PACKED_MUD_ALTAR_STONE.get(),
+                    EejBlocks.CREATIVE_MANA_SOURCE.get());
         }
     }
 }

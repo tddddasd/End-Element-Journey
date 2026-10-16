@@ -7,6 +7,7 @@ import net.minecraftforge.registries.RegistryObject;
 import org.tdddd.eej.impl.altar.PackedMudAltarStone;
 import org.tdddd.eej.impl.altar.PackedMudPedestal;
 import org.tdddd.eej.impl.eej;
+import org.tdddd.eej.impl.mana.CreativeManaSourceBlock;
 
 public class EejBlocks {
     public static final DeferredRegister<Block> BLOCKS =
@@ -22,5 +23,11 @@ public class EejBlocks {
     public static final RegistryObject<Block> PACKED_MUD_ALTAR_STONE = BLOCKS.register(
             "packed_mud_altar_stone",
             PackedMudAltarStone::new
+    );
+
+    
+    public static final RegistryObject<Block> CREATIVE_MANA_SOURCE = BLOCKS.register(
+            "creative_mana_source",
+            CreativeManaSourceBlock::new
     );
 }

@@ -22,6 +22,11 @@ public class EejItems {
             () -> new BlockItem(EejBlocks.PACKED_MUD_ALTAR_STONE.get(), new Item.Properties()));
 
     
+    public static final RegistryObject<Item> CREATIVE_MANA_SOURCE = ITEMS.register(
+            "creative_mana_source",
+            () -> new BlockItem(EejBlocks.CREATIVE_MANA_SOURCE.get(), new Item.Properties()));
+
+    
     public static final RegistryObject<Item> SMALL_ITEM_FRAME = ITEMS.register(
             "small_item_frame",
             () -> new SmallItemFrame(new Item.Properties()));

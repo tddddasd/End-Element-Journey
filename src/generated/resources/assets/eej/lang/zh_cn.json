@@ -1,4 +1,5 @@
 {
+  "block.eej.creative_mana_source": "创造模式魔能源",
   "block.eej.packed_mud_altar_stone": "泥坯祭坛石",
   "block.eej.packed_mud_pedestal": "泥坯祭台",
   "category.eej.altar_crafting": "祭坛合成",
@@ -31,5 +32,6 @@
   "item.small_item_frame.count": "已存 %d/%d",
   "item.small_item_frame.max_reached": "无法添加（已达上限或已存在）",
   "item.small_item_frame.no_offhand": "副手无物品",
-  "itemGroup.eej.main_tab": "终末-元素奇旅"
+  "itemGroup.eej.main_tab": "终末-元素奇旅",
+  "jei.eej.altar_crafting.mana": "需要 %s mana"
 }

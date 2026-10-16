@@ -18,6 +18,20 @@ public class AltarCraftingRecipe {
     public List<IngredientEntry> getInputs() { return inputs; }
     public ItemStack getOutput() { return output; }
 
+    /**
+     * Mana the ritual spends on this recipe: 1 mana per altar whose item the ritual consumes.
+     *
+     * <p>An altar holds exactly one item, so the ritual consumes one altar per consumed item and the
+     * cost is simply the total ingredient count. JEI shows it as a plain integer, never abbreviated.</p>
+     */
+    public int getManaCost() {
+        int total = 0;
+        for (IngredientEntry input : inputs) {
+            total += input.getCount();
+        }
+        return total;
+    }
+
     public static class IngredientEntry {
         private final List<ItemStack> displayStacks;
         private final int count;
