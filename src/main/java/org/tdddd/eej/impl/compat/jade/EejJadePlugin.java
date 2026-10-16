@@ -89,7 +89,15 @@ public class EejJadePlugin implements IWailaPlugin {
 
         @Override
         public void appendTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
-            ManaBlockProvider.appendManaTooltip(tooltip, accessor, config);
+            try {
+                ManaBlockProvider.appendManaTooltip(tooltip, accessor, config);
+            } catch (Throwable t) {
+                // Jade runs component providers straight from the render path and does not catch,
+                // so anything that escapes here would take the whole client down. Degrade to
+                // "no bar" instead.
+                org.apache.logging.log4j.LogManager.getLogger("eej-jade")
+                        .debug("mana tooltip provider failed", t);
+            }
         }
 
         @Override
@@ -129,18 +137,24 @@ public class EejJadePlugin implements IWailaPlugin {
                             mix(COLOR_MANA_EMPTY, COLOR_MANA_EMPTY_FLASH, flash));
 
             
-            // canDecrease = true: Jade's progress tracker is keyed by plugin uid and shared by every
-            // mana block, so it must be allowed to chase the value downwards too - otherwise looking
-            // at a full creative source and then at a drained altar would keep the bar full.
-            IElement bar = helper.progress(ratio, Component.empty(), style, IBoxStyle.Empty.INSTANCE, true)
+            // canDecrease = false: Jade's progress tracker is keyed by plugin uid and shared by
+            // every mana block, so letting it chase a downwards value would mix the creative
+            // source's maximum with a drained altar's.
+            IElement bar = helper.progress(ratio, Component.empty(), style, IBoxStyle.Empty.INSTANCE, false)
                     .size(new Vec2(BAR_WIDTH, BAR_HEIGHT));
             tooltip.add(bar);
 
             
             int textColor = mix(COLOR_MANA_PINK, COLOR_FLASH_RED, flash);
-            tooltip.append(helper.text(Component.literal(ManaFormat.bar(mana, max))
+            IElement manaText = helper.text(Component.literal(ManaFormat.bar(mana, max))
                             .withStyle(style2 -> style2.withColor(TextColor.fromRgb(textColor))))
-                    .translate(new Vec2(TEXT_GAP, 1.0F)));
+                    .translate(new Vec2(TEXT_GAP, 1.0F));
+            // append() targets the last line and throws when there is none.
+            if (tooltip.size() > 0) {
+                tooltip.append(manaText);
+            } else {
+                tooltip.add(manaText);
+            }
         }
 
         @Override
