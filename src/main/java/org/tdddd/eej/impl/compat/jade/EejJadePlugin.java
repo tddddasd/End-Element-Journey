@@ -72,7 +72,7 @@ public class EejJadePlugin implements IWailaPlugin {
     private static final String TAG_MAX_MANA = "eej:MaxMana";
 
     
-    private static final int COLOR_MANA_PINK = 0xFFFF69B4;
+    private static final int COLOR_MANA_PINK = 0xFFFFB6C1;
     
     private static final int COLOR_MANA_EMPTY = 0xFF000000;
     
@@ -109,10 +109,6 @@ public class EejJadePlugin implements IWailaPlugin {
 
         @Override
         public void appendTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
-            if (!config.get(MANA_INFO)) {
-                return;
-            }
-
             int mana;
             int max;
             CompoundTag serverData = accessor.getServerData();
