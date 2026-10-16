@@ -28,13 +28,9 @@ public class EejCapabilityAttachmentEvents {
     @SubscribeEvent
     public static void attachBlockEntityCapabilities(AttachCapabilitiesEvent<BlockEntity> event) {
         if (event.getObject() instanceof PackedMudPedestalBlockEntity pedestal) {
-            if (pedestal.getManaStorage() != null) {
-                event.addCapability(MANA_STORAGE_ID, new ManaStorageProvider(pedestal.getManaStorage()));
-            }
+            event.addCapability(MANA_STORAGE_ID, new ManaStorageProvider(pedestal::getManaStorage));
         } else if (event.getObject() instanceof CreativeManaSourceBlockEntity source) {
-            if (source.getManaStorage() != null) {
-                event.addCapability(MANA_STORAGE_ID, new ManaStorageProvider(source.getManaStorage()));
-            }
+            event.addCapability(MANA_STORAGE_ID, new ManaStorageProvider(source::getManaStorage));
         }
     }
 }
