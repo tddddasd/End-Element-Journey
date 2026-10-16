@@ -173,8 +173,20 @@ public class EejJadePlugin implements IWailaPlugin {
         }
 
         private static IManaStorage manaOf(BlockEntity blockEntity) {
-            return blockEntity == null ? null
-                    : blockEntity.getCapability(EejCapabilities.MANA_STORAGE).orElse(null);
+            if (blockEntity == null) {
+                return null;
+            }
+            try {
+                net.minecraftforge.common.util.LazyOptional<IManaStorage> capability =
+                        blockEntity.getCapability(EejCapabilities.MANA_STORAGE);
+                // When a block entity is removed Forge invalidates its capabilities, which leaves the
+                // LazyOptional's supplier returning null and makes orElse() throw
+                // "Supplier should not return null value". Jade keeps re-querying the last looked-at
+                // position while the tooltip fades out, so that used to spam the log on every tick.
+                return capability.isPresent() ? capability.orElse(null) : null;
+            } catch (RuntimeException e) {
+                return null;
+            }
         }
 
         private static float flashOf(BlockEntity blockEntity) {
