@@ -115,7 +115,7 @@ public class EejJadePlugin implements IWailaPlugin {
         }
 
         @Override
-        public ResourceLocation getUid() {
+        public Identifier getUid() {
             return MANA_INFO;
         }
     }
