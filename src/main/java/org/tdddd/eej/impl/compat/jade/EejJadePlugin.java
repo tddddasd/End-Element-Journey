@@ -1,5 +1,7 @@
 package org.tdddd.eej.impl.compat.jade;
 
+import net.minecraft.client.gui.GuiGraphics;
+import snownee.jade.api.ui.Element;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextColor;
@@ -84,6 +86,42 @@ public class EejJadePlugin implements IWailaPlugin {
     /** Jade since MC 1.21.6 requires the data provider and the component provider to be
      *  different classes, so the tooltip rendering lives here and shares {@link #getUid()}
      *  with the server provider - that uid is how Jade pairs the two. */
+    /**
+     * Smooth mana bar. Jade 11.13.3's own progress element draws a <em>segmented</em> bar, which does
+     * not match the smooth bar the 26.1.2 tree gets from {@code JadeUI.progress}, so both trees now
+     * paint the same thing: a filled remainder plus a partial fill, in the same colours and size.
+     */
+    public static class ManaBarElement extends Element {
+        private final float ratio;
+        private final int fillColor;
+        private final int emptyColor;
+
+        public ManaBarElement(float ratio, int fillColor, int emptyColor) {
+            this.ratio = Mth.clamp(ratio, 0.0F, 1.0F);
+            this.fillColor = fillColor;
+            this.emptyColor = emptyColor;
+            this.size = new Vec2(BAR_WIDTH, BAR_HEIGHT);
+        }
+
+        @Override
+        public Vec2 getSize() {
+            return this.size;
+        }
+
+        @Override
+        public void render(GuiGraphics graphics, float x, float y, float maxX, float maxY) {
+            int left = (int) x;
+            int top = (int) y;
+            int width = (int) BAR_WIDTH;
+            int height = (int) BAR_HEIGHT;
+            graphics.fill(left, top, left + width, top + height, this.emptyColor);
+            int filled = Math.round(width * this.ratio);
+            if (filled > 0) {
+                graphics.fill(left, top, left + filled, top + height, this.fillColor);
+            }
+        }
+    }
+
     public static class ManaClientProvider implements IBlockComponentProvider {
         public static final ManaClientProvider INSTANCE = new ManaClientProvider();
 
@@ -132,23 +170,21 @@ public class EejJadePlugin implements IWailaPlugin {
             float ratio = max > 0 ? Mth.clamp((float) mana / (float) max, 0.0F, 1.0F) : 0.0F;
 
             IElementHelper helper = tooltip.getElementHelper();
-            IProgressStyle style = helper.progressStyle()
-                    .color(mix(COLOR_MANA_PINK, COLOR_FLASH_RED, flash),
-                            mix(COLOR_MANA_EMPTY, COLOR_MANA_EMPTY_FLASH, flash));
+            int fillColor = mix(COLOR_MANA_PINK, COLOR_FLASH_RED, flash);
+            int emptyColor = mix(COLOR_MANA_EMPTY, COLOR_MANA_EMPTY_FLASH, flash);
 
             
             // canDecrease = false: Jade's progress tracker is keyed by plugin uid and shared by
             // every mana block, so letting it chase a downwards value would mix the creative
             // source's maximum with a drained altar's.
-            IElement bar = helper.progress(ratio, Component.empty(), style, IBoxStyle.Empty.INSTANCE, false)
-                    .size(new Vec2(BAR_WIDTH, BAR_HEIGHT));
+            IElement bar = new ManaBarElement(ratio, fillColor, emptyColor);
             tooltip.add(bar);
 
             
             int textColor = mix(COLOR_MANA_PINK, COLOR_FLASH_RED, flash);
             IElement manaText = helper.text(Component.literal(ManaFormat.bar(mana, max))
                             .withStyle(style2 -> style2.withColor(TextColor.fromRgb(textColor))))
-                    .translate(new Vec2(TEXT_GAP, 1.0F));
+                    .translate(new Vec2(TEXT_GAP, 0.0F));
             // append() targets the last line and throws when there is none.
             if (tooltip.size() > 0) {
                 tooltip.append(manaText);
