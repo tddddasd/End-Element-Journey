@@ -18,7 +18,12 @@ public class PackedMudPedestal extends AbstractAltarBlock {
     public static final int MAX_COUNT_IN_STRUCTURE = 21;
 
     public PackedMudPedestal() {
-        this(Properties.of()
+        this(Properties.of());
+    }
+
+    
+    public PackedMudPedestal(Properties properties) {
+        super(ALTAR_POINTS, MAX_COUNT_IN_STRUCTURE, properties
                 .noOcclusion()
                 .strength(1.0f, 3.0f)
                 .sound(SoundType.PACKED_MUD)
@@ -27,11 +32,6 @@ public class PackedMudPedestal extends AbstractAltarBlock {
                 .pushReaction(PushReaction.DESTROY)
                 .requiresCorrectToolForDrops()
                 .mapColor(DyeColor.ORANGE));
-    }
-
-    
-    public PackedMudPedestal(Properties properties) {
-        super(ALTAR_POINTS, MAX_COUNT_IN_STRUCTURE, properties);
     }
 
     @Override

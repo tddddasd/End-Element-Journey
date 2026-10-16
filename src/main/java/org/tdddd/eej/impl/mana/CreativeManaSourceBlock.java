@@ -29,17 +29,17 @@ public class CreativeManaSourceBlock extends BaseEntityBlock {
     public static final MapCodec<CreativeManaSourceBlock> CODEC = simpleCodec(CreativeManaSourceBlock::new);
 
     public CreativeManaSourceBlock() {
-        this(Properties.of()
+        this(Properties.of());
+    }
+
+    
+    public CreativeManaSourceBlock(Properties properties) {
+        super(properties
                 .strength(5.0F, 1200.0F)
                 .sound(SoundType.AMETHYST)
                 .mapColor(DyeColor.PINK)
                 .lightLevel(state -> 10)
         );
-    }
-
-    
-    public CreativeManaSourceBlock(Properties properties) {
-        super(properties);
     }
 
     @Override
