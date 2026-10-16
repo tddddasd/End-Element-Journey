@@ -111,7 +111,14 @@ public class EejJadePlugin implements IWailaPlugin {
 
         @Override
         public void appendTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
-            ManaBlockProvider.appendManaTooltip(tooltip, accessor, config);
+            try {
+                ManaBlockProvider.appendManaTooltip(tooltip, accessor, config);
+            } catch (Throwable t) {
+                // Jade runs component providers from the render path and does not
+                // catch, so anything thrown here would take the client down.
+                org.apache.logging.log4j.LogManager.getLogger("eej-jade")
+                        .debug("mana tooltip provider failed", t);
+            }
         }
 
         @Override
