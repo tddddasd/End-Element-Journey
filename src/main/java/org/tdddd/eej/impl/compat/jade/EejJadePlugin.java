@@ -1,5 +1,9 @@
 package org.tdddd.eej.impl.compat.jade;
 
+import java.util.Map;
+
+import java.util.HashMap;
+
 import net.minecraft.client.gui.GuiGraphics;
 import snownee.jade.api.ui.Element;
 import net.minecraft.nbt.CompoundTag;
@@ -93,16 +97,20 @@ public class EejJadePlugin implements IWailaPlugin {
      */
     public static class ManaBarElement extends Element {
         private static final int BORDER_COLOR = 0xFFFFFFFF;
-        private static final float RATIO_PER_SECOND = 0.35F;
+        private static final float RATIO_PER_SECOND = 1.5F;
+        private static final int MAX_TRACKED = 256;
 
-        private static float animatedRatio = -1.0F;
-        private static long lastUpdateNanos = 0L;
+        /** Easing state is per block: two altars must never share one bar's animation. */
+        private static final Map<Long, Float> RATIO = new HashMap<>();
+        private static final Map<Long, Long> UPDATED = new HashMap<>();
 
+        private final BlockEntity blockEntity;
         private final float target;
         private final int fillColor;
         private final int emptyColor;
 
-        public ManaBarElement(float target, int fillColor, int emptyColor) {
+        public ManaBarElement(BlockEntity blockEntity, float target, int fillColor, int emptyColor) {
+            this.blockEntity = blockEntity;
             this.target = Mth.clamp(target, 0.0F, 1.0F);
             this.fillColor = fillColor;
             this.emptyColor = emptyColor;
@@ -121,7 +129,7 @@ public class EejJadePlugin implements IWailaPlugin {
             int right = left + (int) BAR_WIDTH;
             int bottom = top + (int) BAR_HEIGHT;
 
-            float shown = animate(this.target);
+            float shown = animate(this.key(), this.target);
 
             graphics.fill(left + 1, top + 1, right - 1, bottom - 1, this.emptyColor);
             int innerWidth = (int) BAR_WIDTH - 2;
@@ -136,24 +144,38 @@ public class EejJadePlugin implements IWailaPlugin {
             graphics.fill(right - 1, top + 1, right, bottom - 1, BORDER_COLOR);
         }
 
+        private long key() {
+            return this.blockEntity == null ? 0L : this.blockEntity.getBlockPos().asLong();
+        }
+
         /** Time based, so the bar keeps easing even when Jade does not rebuild the tooltip. */
-        private static float animate(float target) {
+        private static float animate(long key, float target) {
             long now = System.nanoTime();
-            if (animatedRatio < 0.0F) {
-                animatedRatio = target;
-                lastUpdateNanos = now;
-                return animatedRatio;
+            Float current = RATIO.get(key);
+            if (current == null) {
+                if (RATIO.size() >= MAX_TRACKED) {
+                    RATIO.clear();
+                    UPDATED.clear();
+                }
+                RATIO.put(key, target);
+                UPDATED.put(key, now);
+                return target;
             }
-            float elapsed = Math.min((now - lastUpdateNanos) / 1_000_000_000.0F, 0.25F);
-            lastUpdateNanos = now;
+            Long updated = UPDATED.get(key);
+            float elapsed = updated == null ? 0.0F
+                    : Math.min((now - updated) / 1_000_000_000.0F, 0.25F);
+            UPDATED.put(key, now);
             float step = RATIO_PER_SECOND * elapsed;
-            float delta = target - animatedRatio;
+            float delta = target - current;
+            float next;
             if (Math.abs(delta) <= step) {
-                animatedRatio = target;
+                next = target;
             } else {
-                animatedRatio += Math.signum(delta) * step;
+                next = current + Math.signum(delta) * step;
             }
-            return Mth.clamp(animatedRatio, 0.0F, 1.0F);
+            next = Mth.clamp(next, 0.0F, 1.0F);
+            RATIO.put(key, next);
+            return next;
         }
     }
 
@@ -212,7 +234,7 @@ public class EejJadePlugin implements IWailaPlugin {
             // canDecrease = false: Jade's progress tracker is keyed by plugin uid and shared by
             // every mana block, so letting it chase a downwards value would mix the creative
             // source's maximum with a drained altar's.
-            IElement bar = new ManaBarElement(ratio, fillColor, emptyColor);
+            IElement bar = new ManaBarElement(accessor.getBlockEntity(), ratio, fillColor, emptyColor);
             tooltip.add(bar);
 
             
