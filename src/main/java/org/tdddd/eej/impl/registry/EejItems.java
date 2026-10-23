@@ -27,6 +27,12 @@ public class EejItems {
             () -> new BlockItem(EejBlocks.CREATIVE_MANA_SOURCE.get(), new Item.Properties()));
 
     
+    public static final RegistryObject<Item> ELEMENT_AGGREGATION_PLATE = ITEMS.register(
+            "element_aggregation_plate",
+            () -> new BlockItem(EejBlocks.ELEMENT_AGGREGATION_PLATE.get(),
+                    new Item.Properties().stacksTo(1)));
+
+
     public static final RegistryObject<Item> SMALL_ITEM_FRAME = ITEMS.register(
             "small_item_frame",
             () -> new SmallItemFrame(new Item.Properties()));

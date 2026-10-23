@@ -1,0 +1,27 @@
+{
+  "type": "eej:soul_fire_purification",
+  "explode_fields": [
+    "power: float, default 4.0. Vanilla explosion power; the damage sweep radius is power * 2.",
+    "fire: bool, default false. Whether the explosion creates fire.",
+    "blindness_ticks: int, default 100. Duration of Blindness I applied in the radius, soul fire only."
+  ],
+  "fields": {
+    "burn_chance": "Optional float, informational only; the chance the item is destroyed. Shown by JEI.",
+    "destroyed": "Optional bool, default false. With no results this means the item is consumed without any roll.",
+    "explode": "Optional explosion block; when present the item detonates on contact with fire instead of rolling.",
+    "ingredient": "Standard ingredient object, e.g. {\"item\":\"epca:infested_raw_iron\"}.",
+    "results": "Optional array of output groups. A recipe needs results, explode or destroyed.",
+    "weighted": "Optional bool, default false. When true the result groups share one roll (see result_fields weight)."
+  },
+  "fire_immunity_note": "Purified drops carry the eej_soul_fire_purified flag and an eej_soul_fire_immune_until game time inside their ItemStack NBT, so the timer survives pick up and drop.",
+  "fire_immunity_ticks": 600,
+  "processing_interval_ticks": 10,
+  "result_fields": [
+    "chance: float, default 1.0. Independent roll chance, or the total chance of a weighted alternative group.",
+    "weight: int, default 1. As soon as one group of a recipe uses weight > 1 all weighted groups share one roll and fire when random < chance * weight / sum(weight).",
+    "count_min / count_max: int, default 1. Inclusive count range of the spawned stack.",
+    "items: array of item ids, required. The candidates of the group.",
+    "random: bool, default false. When true one entry of items is picked uniformly; when false the first entry is used."
+  ],
+  "summary": "An item entity standing inside minecraft:soul_fire is rolled once per single item. Successful rolls spawn the configured results, failed rolls consume the item."
+}

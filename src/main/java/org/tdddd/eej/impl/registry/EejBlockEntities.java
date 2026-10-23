@@ -6,6 +6,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.tdddd.eej.impl.altar.blockentity.PackedMudPedestalBlockEntity;
 import org.tdddd.eej.impl.eej;
+import org.tdddd.eej.impl.element.plate.blockentity.ElementAggregationPlateBlockEntity;
 import org.tdddd.eej.impl.mana.blockentity.CreativeManaSourceBlockEntity;
 
 public class EejBlockEntities {
@@ -21,4 +22,9 @@ public class EejBlockEntities {
             BLOCK_ENTITIES.register("creative_mana_source", () ->
                     BlockEntityType.Builder.of(CreativeManaSourceBlockEntity::new, EejBlocks.CREATIVE_MANA_SOURCE.get())
                             .build(null));
+
+    public static final RegistryObject<BlockEntityType<ElementAggregationPlateBlockEntity>> ELEMENT_AGGREGATION_PLATE =
+            BLOCK_ENTITIES.register("element_aggregation_plate", () ->
+                    BlockEntityType.Builder.of(ElementAggregationPlateBlockEntity::new,
+                            EejBlocks.ELEMENT_AGGREGATION_PLATE.get()).build(null));
 }

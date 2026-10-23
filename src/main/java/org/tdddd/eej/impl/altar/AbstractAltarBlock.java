@@ -158,6 +158,13 @@ public abstract class AbstractAltarBlock extends BaseEntityBlock {
                 inputMana(level, pos, player);
 
                 ItemStack targetStack = getFrameTarget(level, pos);
+
+                // an element aggregation plate sitting on the main altar replaces the crafting recipe
+                if (performElementSynthesis(level, pos, data, targetStack)) {
+                    level.playSound(null, pos, SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
+                    return InteractionResult.SUCCESS;
+                }
+
                 if (performCrafting(level, pos, data, targetStack)) {
                     level.playSound(null, pos, SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
                 }
@@ -638,4 +645,57 @@ public abstract class AbstractAltarBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public abstract BlockEntity newBlockEntity(BlockPos pos, BlockState state);
+
+    /**
+     * Element synthesis: a main altar with an element aggregation plate on top consumes the altar's
+     * item plus the plate's mana and produces one result.
+     *
+     * <p>An element result goes into the plate's output slot, any other result is dropped on the altar
+     * so it can be picked up.</p>
+     */
+    protected boolean performElementSynthesis(Level level, BlockPos pos, AltarStructure data,
+                                              ItemStack targetStack) {
+        if (level.isClientSide()) {
+            return false;
+        }
+        // the plate must sit directly on top of this altar block
+        if (!(level.getBlockEntity(pos.above())
+                instanceof org.tdddd.eej.impl.element.plate.blockentity.ElementAggregationPlateBlockEntity plate)) {
+            return false;
+        }
+        if (plate.elements().isEmpty()) {
+            return false;
+        }
+        var recipes = ((net.minecraft.world.item.crafting.RecipeManager) level.getRecipeManager())
+                .getAllRecipesFor(org.tdddd.eej.impl.registry.EejRecipes.ELEMENT_SYNTHESIS.get());
+        for (org.tdddd.eej.impl.recipe.ElementSynthesisRecipe recipe : recipes) {
+            if (!recipe.matchesElements(plate.elements())) {
+                continue;
+            }
+            if (plate.mana() < recipe.mana()) {
+                continue;
+            }
+            if (!plate.outputSlot().isEmpty()) {
+                continue;
+            }
+            ItemStack result = recipe.getResultItem(level.registryAccess()).copy();
+            plate.consumeMana(recipe.mana());
+
+            boolean elementResult = org.tdddd.eej.impl.element.ElementStack.isElement(result);
+            if (elementResult) {
+                plate.setOutputSlot(result);
+            } else {
+                ItemEntity dropped = new ItemEntity(level, pos.getX() + 0.5D, pos.getY() + 1.05D,
+                        pos.getZ() + 0.5D, result);
+                dropped.setPickUpDelay(0);
+                level.addFreshEntity(dropped);
+            }
+            // the altar's own item is consumed
+            if (level.getBlockEntity(pos) instanceof AltarItemContainer container && container.hasItem()) {
+                container.clearItem();
+            }
+            return true;
+        }
+        return false;
+    }
 }

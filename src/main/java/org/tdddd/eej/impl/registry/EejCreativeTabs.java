@@ -21,6 +21,7 @@ public class EejCreativeTabs {
                         output.accept(EejItems.PACKED_MUD_ALTAR_STONE.get());
                         output.accept(EejItems.CREATIVE_MANA_SOURCE.get());
                         output.accept(EejItems.SMALL_ITEM_FRAME.get());
+                output.accept(EejItems.ELEMENT_AGGREGATION_PLATE.get());
                     })
                     .build());
 }

@@ -25,7 +25,8 @@ public class EejBlockTagData extends BlockTagsProvider {
         tag(BlockTags.MINEABLE_WITH_PICKAXE).add(
                 EejBlocks.PACKED_MUD_PEDESTAL.get(),
                 EejBlocks.PACKED_MUD_ALTAR_STONE.get(),
-                EejBlocks.CREATIVE_MANA_SOURCE.get());
+                EejBlocks.CREATIVE_MANA_SOURCE.get(),
+                EejBlocks.ELEMENT_AGGREGATION_PLATE.get());
 
         
         tag(AltarBlockTags.PEDESTAL_TAG).add(EejBlocks.PACKED_MUD_PEDESTAL.get());

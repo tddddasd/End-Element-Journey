@@ -1,7 +1,8 @@
 {
   "values": [
-    "eej:creative_mana_source",
     "eej:packed_mud_pedestal",
-    "eej:packed_mud_altar_stone"
+    "eej:packed_mud_altar_stone",
+    "eej:creative_mana_source",
+    "eej:element_aggregation_plate"
   ]
 }

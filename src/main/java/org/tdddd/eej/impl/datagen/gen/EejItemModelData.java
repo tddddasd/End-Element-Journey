@@ -15,6 +15,8 @@ public class EejItemModelData extends ItemModelProvider {
 
     @Override
     protected void registerModels() {
+        // The element aggregation plate ships a hand written 3 pixel model; generating one here
+        // would replace it with a plain cube (and duplicate the file).
         basicItem(EejItems.SMALL_ITEM_FRAME.get());
     }
 }

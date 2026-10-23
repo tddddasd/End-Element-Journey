@@ -1,4 +1,7 @@
-// 1.20.1	2026-09-17T20:50:53.7456598	Block States: eej
+// 1.20.1	2026-10-24T03:01:56.1510007	Block States: eej
+e1ef37e3845e34d3127242f0c132f0c56191d564 assets/eej/blockstates/element_aggregation_plate.json
 9377cc24d4ccf21bab93c1275ff9db691f3b6b2a assets/eej/blockstates/packed_mud_altar_stone.json
+a75366b2c333b9fcaf40fc738dbdb45c780b8547 assets/eej/models/block/element_aggregation_plate.json
 eac9aa29fe756e4267f999a117390b0579dd03bc assets/eej/models/block/packed_mud_altar_stone.json
+10c9b95f6f8bf1ac0a805b577f2552fa7b7b5180 assets/eej/models/item/element_aggregation_plate.json
 e5dd092c149497ac00ae2bc6209ba25a5cd269bc assets/eej/models/item/packed_mud_altar_stone.json

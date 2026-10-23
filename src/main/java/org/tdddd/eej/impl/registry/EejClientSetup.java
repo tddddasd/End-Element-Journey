@@ -6,14 +6,18 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import org.tdddd.eej.impl.altar.client.PedestalItemRenderer;
+import org.tdddd.eej.impl.element.plate.client.ElementAggregationPlateRenderer;
 import org.tdddd.eej.impl.eej;
 
 @Mod.EventBusSubscriber(modid = eej.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class EejClientSetup {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
-        event.enqueueWork(() -> BlockEntityRenderers.register(
-                EejBlockEntities.PACKED_MUD_PEDESTAL.get(),
-                PedestalItemRenderer::new));
+        event.enqueueWork(() -> {
+            BlockEntityRenderers.register(EejBlockEntities.PACKED_MUD_PEDESTAL.get(),
+                    PedestalItemRenderer::new);
+            BlockEntityRenderers.register(EejBlockEntities.ELEMENT_AGGREGATION_PLATE.get(),
+                    ElementAggregationPlateRenderer::new);
+        });
     }
 }

@@ -17,8 +17,8 @@ public class EejBlockStateData extends BlockStateProvider {
     
     private static final Set<String> MANUAL_BLOCKS = Set.of(
             "packed_mud_pedestal",
-            "creative_mana_source"
-    );
+            "creative_mana_source",
+            "element_aggregation_plate");
 
     public EejBlockStateData(PackOutput output, ExistingFileHelper exFileHelper) {
         super(output, eej.MODID, exFileHelper);
@@ -26,6 +26,8 @@ public class EejBlockStateData extends BlockStateProvider {
 
     @Override
     protected void registerStatesAndModels() {
+        // The element aggregation plate ships a hand written 3 pixel model; generating one here
+        // would replace it with a plain cube (and duplicate the file).
         ForgeRegistries.BLOCKS.getEntries().stream()
                 .filter(e -> e.getKey().location().getNamespace().equals(eej.MODID))
                 .filter(e -> !MANUAL_BLOCKS.contains(e.getKey().location().getPath()))
