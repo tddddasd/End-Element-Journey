@@ -37,9 +37,9 @@ public class ElementAggregationPlateRenderer
     /** Height of the output element at the plate centre. */
     private static final float OUTPUT_HEIGHT = 3.6F / 16.0F;
 
-    /** Flat white texture, so the vertex colour alone decides the pixel colour. */
+    /** Flat white texture shipped by the mod, so the vertex colour alone decides the pixel colour. */
     private static final Identifier WHITE =
-            Identifier.fromNamespaceAndPath("minecraft", "textures/misc/white.png");
+            Identifier.fromNamespaceAndPath("eej", "textures/block/element_plate_white.png");
 
     /**
      * Unlit, un-culled alpha blending: the element plates are translucent glowing quads, so the render
