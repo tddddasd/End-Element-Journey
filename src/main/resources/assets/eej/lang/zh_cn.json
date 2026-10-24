@@ -44,5 +44,6 @@
   "commands.eej.island.status.void": "虚空区块",
   "commands.eej.island.status.nonvacuum": "非真空岛区块",
   "commands.eej.island.unknown": "未判定",
-  "commands.eej.island.needs_pos": "控制台执行时必须指定坐标"
+  "commands.eej.island.needs_pos": "控制台执行时必须指定坐标",
+  "block.eej.element_aggregation_plate": "元素聚合板"
 }

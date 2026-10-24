@@ -44,5 +44,6 @@
   "item.small_item_frame.no_offhand": "No item in offhand",
   "itemGroup.eej.main_tab": "End:Element Journey",
   "jei.eej.altar_crafting.hint": "Place the materials on any pedestals - order does not matter",
-  "jei.eej.altar_crafting.mana": "Requires %s mana"
+  "jei.eej.altar_crafting.mana": "Requires %s mana",
+  "block.eej.element_aggregation_plate": "Element Aggregation Plate"
 }
