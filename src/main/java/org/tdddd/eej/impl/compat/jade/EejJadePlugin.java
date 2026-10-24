@@ -14,6 +14,8 @@ import org.tdddd.eej.impl.altar.PackedMudPedestal;
 import org.tdddd.eej.impl.altar.blockentity.PackedMudPedestalBlockEntity;
 import org.tdddd.eej.impl.capability.EejCapabilities;
 import org.tdddd.eej.impl.eej;
+import org.tdddd.eej.impl.element.plate.ElementAggregationPlate;
+import org.tdddd.eej.impl.element.plate.blockentity.ElementAggregationPlateBlockEntity;
 import org.tdddd.eej.impl.mana.CreativeManaSourceBlock;
 import org.tdddd.eej.impl.mana.blockentity.CreativeManaSourceBlockEntity;
 import snownee.jade.api.BlockAccessor;
@@ -90,12 +92,15 @@ public class EejJadePlugin implements IWailaPlugin {
     public void register(IWailaCommonRegistration registration) {
         registration.registerBlockDataProvider(ManaBlockProvider.INSTANCE, PackedMudPedestalBlockEntity.class);
         registration.registerBlockDataProvider(ManaBlockProvider.INSTANCE, CreativeManaSourceBlockEntity.class);
+        registration.registerBlockDataProvider(ManaBlockProvider.INSTANCE,
+                ElementAggregationPlateBlockEntity.class);
     }
 
     @Override
     public void registerClient(IWailaClientRegistration registration) {
         registration.registerBlockComponent(ManaClientProvider.INSTANCE, PackedMudPedestal.class);
         registration.registerBlockComponent(ManaClientProvider.INSTANCE, CreativeManaSourceBlock.class);
+        registration.registerBlockComponent(ManaClientProvider.INSTANCE, ElementAggregationPlate.class);
         try {
             registration.addConfig(MANA_INFO, true);
         } catch (IllegalArgumentException ignored) {
