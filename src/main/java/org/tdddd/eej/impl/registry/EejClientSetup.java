@@ -9,6 +9,7 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterItemModelsEvent;
 import org.tdddd.eej.impl.altar.client.PedestalItemRenderer;
 import org.tdddd.eej.impl.element.client.ElementItemModel;
+import org.tdddd.eej.impl.element.plate.client.ElementAggregationPlateRenderer;
 import org.tdddd.eej.impl.eej;
 
 
@@ -18,6 +19,8 @@ public class EejClientSetup {
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(EejBlockEntities.PACKED_MUD_PEDESTAL.get(), PedestalItemRenderer::new);
+        event.registerBlockEntityRenderer(EejBlockEntities.ELEMENT_AGGREGATION_PLATE.get(),
+                ElementAggregationPlateRenderer::new);
     }
 
     /** Registers the custom item model type {@code eej:element} used by {@code assets/eej/items/element.json}. */
