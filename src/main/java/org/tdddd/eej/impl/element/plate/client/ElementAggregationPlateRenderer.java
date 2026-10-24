@@ -104,8 +104,9 @@ public class ElementAggregationPlateRenderer
         poseStack.translate(x, y, z);
         poseStack.mulPose(Axis.YP.rotationDegrees(yaw));
 
+        // Copy the matrix now: the submitted lambda may run after the pose stack has moved on.
+        final org.joml.Matrix4f matrix = new org.joml.Matrix4f(poseStack.last().pose());
         collector.submitCustomGeometry(poseStack, TRANSLUCENT_QUADS, (pose, buffer) -> {
-            org.joml.Matrix4f matrix = poseStack.last().pose();
             vertex(buffer, matrix, -QUAD_HALF, -QUAD_HALF, r, g, b, alpha, 0.0F, 1.0F);
             vertex(buffer, matrix, QUAD_HALF, -QUAD_HALF, r, g, b, alpha, 1.0F, 1.0F);
             vertex(buffer, matrix, QUAD_HALF, QUAD_HALF, r, g, b, alpha, 1.0F, 0.0F);
