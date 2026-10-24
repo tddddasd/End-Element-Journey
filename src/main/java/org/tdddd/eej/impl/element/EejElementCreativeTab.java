@@ -34,6 +34,10 @@ public final class EejElementCreativeTab {
             return;
         }
 
+        // the plate belongs to the element tab: it is the element crafting surface
+        event.accept(new ItemStack(EejItems.ELEMENT_AGGREGATION_PLATE.get()),
+                TabVisibility.PARENT_AND_SEARCH_TABS);
+
         ItemStack plain = new ItemStack(EejItems.ELEMENT.get());
         event.accept(plain, TabVisibility.PARENT_AND_SEARCH_TABS);
 

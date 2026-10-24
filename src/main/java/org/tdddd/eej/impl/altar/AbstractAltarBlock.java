@@ -242,6 +242,13 @@ public abstract class AbstractAltarBlock extends BaseEntityBlock {
         }
 
         ItemStack targetStack = getFrameTarget(level, pos);
+
+        // an element aggregation plate on the main altar replaces the crafting recipe
+        if (performElementSynthesis(level, pos, data)) {
+            level.playSound(null, pos, SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
+            return InteractionResult.SUCCESS;
+        }
+
         CraftingOutcome outcome = performCrafting(level, pos, data, targetStack);
         if (outcome == CraftingOutcome.SUCCESS) {
             level.playSound(null, pos, SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
@@ -897,4 +904,48 @@ public abstract class AbstractAltarBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public abstract BlockEntity newBlockEntity(BlockPos pos, BlockState state);
+
+    /**
+     * Element synthesis: a main altar with an element aggregation plate on top consumes the plate's
+     * elements and mana and produces one result.
+     *
+     * <p>An element result goes into the plate's output slot, any other result is dropped on the altar
+     * so it can be picked up.</p>
+     */
+    protected boolean performElementSynthesis(Level level, BlockPos pos, AltarStructure data) {
+        if (level.isClientSide()) {
+            return false;
+        }
+        if (!(level.getBlockEntity(pos.above())
+                instanceof org.tdddd.eej.impl.element.plate.blockentity.ElementAggregationPlateBlockEntity plate)) {
+            return false;
+        }
+        if (plate.elements().isEmpty() || !plate.outputSlot().isEmpty()) {
+            return false;
+        }
+        for (net.minecraft.world.item.crafting.RecipeHolder<?> holder : ((net.minecraft.world.item.crafting.RecipeManager) level.recipeAccess()).getRecipes()) {
+            if (!(holder.value() instanceof org.tdddd.eej.impl.recipe.ElementSynthesisRecipe recipe)) {
+                continue;
+            }
+            if (!recipe.matchesElements(plate.elements()) || plate.mana() < recipe.mana()) {
+                continue;
+            }
+            net.minecraft.world.item.ItemStack result = recipe.assemble(null).copy();
+            plate.consumeMana(recipe.mana());
+            if (org.tdddd.eej.impl.element.ElementStack.id(result) != null) {
+                plate.setOutputSlot(result);
+            } else {
+                net.minecraft.world.entity.item.ItemEntity dropped = new net.minecraft.world.entity.item.ItemEntity(
+                        level, pos.getX() + 0.5D, pos.getY() + 1.05D, pos.getZ() + 0.5D, result);
+                dropped.setPickUpDelay(0);
+                level.addFreshEntity(dropped);
+            }
+            if (level.getBlockEntity(pos) instanceof org.tdddd.eej.api.AltarItemContainer container
+                    && container.hasItem()) {
+                container.clearItem();
+            }
+            return true;
+        }
+        return false;
+    }
 }

@@ -5,6 +5,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import org.tdddd.eej.impl.altar.PackedMudAltarStone;
 import org.tdddd.eej.impl.altar.PackedMudPedestal;
 import org.tdddd.eej.impl.eej;
+import org.tdddd.eej.impl.element.plate.ElementAggregationPlate;
 import org.tdddd.eej.impl.mana.CreativeManaSourceBlock;
 
 /**
@@ -42,6 +43,12 @@ public class EejBlocks {
     public static final DeferredBlock<CreativeManaSourceBlock> CREATIVE_MANA_SOURCE = BLOCKS.registerBlock(
             "creative_mana_source",
             CreativeManaSourceBlock::new
+    );
+
+    /** Element aggregation plate: three pixels tall, holds nine element ids. */
+    public static final DeferredBlock<ElementAggregationPlate> ELEMENT_AGGREGATION_PLATE = BLOCKS.registerBlock(
+            "element_aggregation_plate",
+            ElementAggregationPlate::new
     );
 
     private EejBlocks() {

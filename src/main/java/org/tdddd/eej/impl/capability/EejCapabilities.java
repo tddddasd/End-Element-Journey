@@ -37,6 +37,8 @@ public final class EejCapabilities {
     public static void registerManaProviders(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(MANA_STORAGE, EejBlockEntities.CREATIVE_MANA_SOURCE.get(),
                 (be, side) -> new ManaStorageProvider(be.getManaStorage()).getManaStorage());
+        event.registerBlockEntity(MANA_STORAGE, EejBlockEntities.ELEMENT_AGGREGATION_PLATE.get(),
+                (be, side) -> be.manaStorage());
     }
 
     private EejCapabilities() {

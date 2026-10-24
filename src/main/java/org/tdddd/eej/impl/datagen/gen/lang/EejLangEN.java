@@ -20,6 +20,7 @@ public class EejLangEN extends LanguageProvider {
         add(EejBlocks.PACKED_MUD_PEDESTAL.get(), "Packed Mud Pedestal");
         add(EejBlocks.PACKED_MUD_ALTAR_STONE.get(), "Packed Mud Altar Stone");
         add(EejBlocks.CREATIVE_MANA_SOURCE.get(), "Creative Mana Source");
+        add(EejBlocks.ELEMENT_AGGREGATION_PLATE.get(), "Element Aggregation Plate");
         add(EejItems.SMALL_ITEM_FRAME.get(), "Small Item Filter Frame");
 
         // Elements: the generic item name plus the display name of every element registered by the built-in data

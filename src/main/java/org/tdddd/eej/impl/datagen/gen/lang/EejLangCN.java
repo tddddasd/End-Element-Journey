@@ -21,6 +21,7 @@ public class EejLangCN extends LanguageProvider {
         add(EejBlocks.PACKED_MUD_PEDESTAL.get(), "泥坯祭台");
         add(EejBlocks.PACKED_MUD_ALTAR_STONE.get(), "泥坯祭坛石");
         add(EejBlocks.CREATIVE_MANA_SOURCE.get(), "创造模式魔能源");
+        add(EejBlocks.ELEMENT_AGGREGATION_PLATE.get(), "元素聚合板");
         add(EejItems.SMALL_ITEM_FRAME.get(), "小型物品过滤展示框");
 
         

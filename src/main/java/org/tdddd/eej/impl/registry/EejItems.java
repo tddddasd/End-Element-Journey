@@ -36,6 +36,11 @@ public class EejItems {
             "creative_mana_source",
             properties -> new BlockItem(EejBlocks.CREATIVE_MANA_SOURCE.get(), properties.useBlockDescriptionPrefix()));
 
+    public static final DeferredItem<Item> ELEMENT_AGGREGATION_PLATE = ITEMS.registerItem(
+            "element_aggregation_plate",
+            properties -> new BlockItem(EejBlocks.ELEMENT_AGGREGATION_PLATE.get(),
+                    properties.useBlockDescriptionPrefix()));
+
     /** Small item filter frame: sets the pedestal's filter condition. */
     public static final DeferredItem<Item> SMALL_ITEM_FRAME = ITEMS.registerItem(
             "small_item_frame",

@@ -6,6 +6,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.tdddd.eej.impl.altar.blockentity.PackedMudPedestalBlockEntity;
 import org.tdddd.eej.impl.eej;
+import org.tdddd.eej.impl.element.plate.blockentity.ElementAggregationPlateBlockEntity;
 import org.tdddd.eej.impl.mana.blockentity.CreativeManaSourceBlockEntity;
 
 
@@ -21,6 +22,12 @@ public class EejBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CreativeManaSourceBlockEntity>> CREATIVE_MANA_SOURCE =
             BLOCK_ENTITIES.register("creative_mana_source", () ->
                     new BlockEntityType<>(CreativeManaSourceBlockEntity::new, EejBlocks.CREATIVE_MANA_SOURCE.get()));
+
+    /** Element aggregation plate: nine element ids, one output slot, ten mana. */
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ElementAggregationPlateBlockEntity>>
+            ELEMENT_AGGREGATION_PLATE = BLOCK_ENTITIES.register("element_aggregation_plate", () ->
+            new BlockEntityType<>(ElementAggregationPlateBlockEntity::new,
+                    EejBlocks.ELEMENT_AGGREGATION_PLATE.get()));
 
     private EejBlockEntities() {
     }
